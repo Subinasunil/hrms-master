@@ -115,8 +115,6 @@ class CustomFieldSerializer(serializers.ModelSerializer):
         model = Emp_CustomField
         fields = '__all__'     
 
-
-
 #EMPLOYEE SERIALIZER
 class EmpSerializer(serializers.ModelSerializer):
     

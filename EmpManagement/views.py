@@ -273,6 +273,7 @@ class CustomFieldViewset(viewsets.ModelViewSet):
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
+
 class EmpFam_CustomFieldViewset(viewsets.ModelViewSet):
     queryset = EmpFamily_CustomField.objects.all()
     serializer_class = EmpFam_CustomFieldSerializer
@@ -376,61 +377,6 @@ class EmpDoc_UdfViewset(viewsets.ModelViewSet):
 
 
 #emp bulkupload
-# class EmpbulkuploadViewSet(viewsets.ModelViewSet):
-#     queryset = emp_master.objects.all()
-#     serializer_class = EmpBulkUploadSerializer
-#     permission_classes = [IsAuthenticated]
-#     parser_classes = (MultiPartParser, FormParser)
-
-    # @action(detail=False, methods=['post'], parser_classes=[MultiPartParser, FormParser])
-    # def bulk_upload(self, request):
-    #     serializer_class = EmpBulkUploadSerializer
-    #     if request.method == 'POST' and request.FILES.get('file'):
-    #         excel_file = request.FILES['file']
-    #         if excel_file.name.endswith('.xlsx'):
-    #             try:
-    #                 # Load data from the Excel file into a Dataset
-    #                 dataset = Dataset()
-    #                 dataset.load(excel_file.read(), format='xlsx')
-
-    #                 # Create a resource instance
-    #                 resource = EmployeeResource()
-    #                 # Create a udf resource instance
-    #                 custom_field_resource = EmpCustomFieldResource()
-    #                 # Analyze the entire dataset to collect errors
-    #                 all_errors = []
-    #                 valid_rows = []
-    #                 with transaction.atomic():
-    #                     for row_idx, row in enumerate(dataset.dict, start=2):  # Start from row 2 (1-based index)
-    #                         row_errors = []
-    #                         try:
-    #                             resource.before_import_row(row, row_idx=row_idx)
-    #                              # Validate and import data for Emp_CustomField model
-    #                             custom_field_resource.before_import_row(row, row_idx=row_idx)      
-    #                         except ValidationError as e:             
-    #                             row_errors.extend([f"Row {row_idx}: {error}" for error in e.messages])      
-    #                         if row_errors:
-    #                             all_errors.extend(row_errors)
-    #                         else:
-    #                             valid_rows.append(row)
-
-                        
-
-    #                 # If there are any errors, return them
-    #                 if all_errors:
-    #                     return Response({"errors": all_errors}, status=400)
-
-    #                 # If no errors, import valid data into the model
-    #                 with transaction.atomic():
-    #                     result = resource.import_data(dataset, dry_run=False, raise_errors=True)
-    #                     custom_field_result = custom_field_resource.import_data(dataset, dry_run=False, raise_errors=True)
-    #                 return Response({"message": f"{result.total_rows} records created successfully"})
-    #             except Exception as e:
-    #                 return Response({"error": str(e)}, status=400)
-    #         else:
-    #             return Response({"error": "Invalid file format. Only Excel files (.xlsx) are supported."}, status=400)
-    #     else:
-    #         return Response({"error": "Please provide an Excel file."}, status=400)
 
 class EmpbulkuploadViewSet(viewsets.ModelViewSet):
     queryset = emp_master.objects.all()

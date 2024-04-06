@@ -1,6 +1,4 @@
 from rest_framework import permissions
-# 
-
 from .models import CustomUser
 from django.contrib.auth.models import Group
 from django.contrib.auth.models import User

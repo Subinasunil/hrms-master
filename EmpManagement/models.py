@@ -9,11 +9,8 @@ from import_export import resources, fields
 from django.contrib import admin
 from import_export.admin import ImportExportModelAdmin
 from django import forms
-import datetime
+import datetime,json
 from django.core.validators import validate_email
-# from djangouserdefinedfields.models import ExtraFieldsJSONField
-# class Example(models.Model):
-#   extra_fields = ExtraFieldsJSONField()
 
 class emp_master(models.Model):
 
@@ -67,15 +64,8 @@ class emp_master(models.Model):
     emp_desgntn_id = models.ForeignKey("OrganisationManager.desgntn_master",on_delete = models.CASCADE,null=True,blank =True)
     emp_ctgry_id = models.ForeignKey("OrganisationManager.ctgry_master",on_delete = models.CASCADE,null=True,blank =True)
     emp_languages = models.ManyToManyField("OrganisationManager.LanguageMaster",null=True,blank =True)
-    # Additional field for storing custom fields
-    # custom_field = models.ForeignKey(CustomField, on_delete=models.CASCADE, null=True, blank=True, related_name='emp_masters_customfield')
     
-
-    # def get_custom_fields(self):
-    #     return self.custom_fields.all()
     
-
-
     def save(self, *args, **kwargs):
         if self.is_ess:
 
@@ -114,12 +104,18 @@ class Emp_CustomField(models.Model):
         ('date', 'DateField'),
         ('email', 'EmailField'),
         ('integer', 'IntegerField'),
-        ('boolean', 'BooleanField'),)
+        ('boolean', 'BooleanField'),
+        ('dropdown', 'DropdownField'),
+        ('text', 'TextField'),
+        ('radio', 'RadioButtonField'),
+        ('select', 'SelectBoxField'),)
     emp_master = models.ForeignKey(emp_master, on_delete=models.CASCADE,related_name='custom_fields')
     field_name = models.CharField(max_length=100)  # Field name provided by end user
     field_value = models.CharField(max_length=255)  # Field value provided by end user
     data_type = models.CharField(max_length=20, choices=FIELD_TYPES,null=True,blank =True)
-
+    dropdown_values = models.JSONField(null=True, blank=True)
+    radio_values = models.JSONField(null=True, blank=True)
+    selectbox_values = models.JSONField(null=True, blank=True)
     
     def save(self, *args, **kwargs):
         if self.data_type == 'char':
@@ -155,7 +151,43 @@ class Emp_CustomField(models.Model):
             else:
                 raise ValidationError({'field_value': ['Invalid boolean value. Accepted values are: true, false, 1, 0, yes, no.']})
 
+        elif self.data_type == 'dropdown':
+            try:
+                # Split the field_value by comma and store as dropdown values
+                dropdown_values_list = [value.strip() for value in self.field_value.split(',')]
+                self.dropdown_values = dropdown_values_list
+            except Exception as e:
+                # Handle exceptions here
+                pass
+        
+        elif self.data_type == 'radio':
+            try:
+                # Split the field_value by comma and store as radio button values
+                radio_values_list = [value.strip() for value in self.field_value.split(',')]
+                self.radio_values = radio_values_list
+            except Exception as e:
+                # Handle exceptions here
+                pass
+
+        elif self.data_type == 'select':
+            try:
+                # Split the field_value by comma and store as select box values
+                selectbox_values_list = [value.strip() for value in self.field_value.split(',')]
+                self.selectbox_values = selectbox_values_list
+            except Exception as e:
+                # Handle exceptions here
+                pass
+
+        
+        elif self.data_type == 'text':
+            # Perform validation for text type if needed
+            #  check if the length of the text is within acceptable limits
+            if len(self.field_value) > 2000:
+                raise ValidationError({'field_value': ['Text exceeds maximum length.']})
+
         super().save(*args, **kwargs)
+    
+    
 
 
 #EMPLOYEE FAMILY(ef) data
@@ -173,7 +205,7 @@ class emp_family(models.Model):
     is_active = models.BooleanField(default=True)
 
     def __str__(self):
-        return f"{self.ef_member_no }"
+        return f"{self.ef_member_no } - {self.emp_login_id}"
 
 class EmpFamily_CustomField(models.Model):
     FIELD_TYPES = (
@@ -181,11 +213,19 @@ class EmpFamily_CustomField(models.Model):
         ('date', 'DateField'),
         ('email', 'EmailField'),
         ('integer', 'IntegerField'),
-        ('boolean', 'BooleanField'),)
+        ('boolean', 'BooleanField'),
+        ('dropdown', 'DropdownField'),
+        ('text', 'TextField'),
+        ('radio', 'RadioButtonField'),
+        ('select', 'SelectBoxField'),)
     emp_family = models.ForeignKey('emp_family', on_delete=models.CASCADE, related_name='fam_custom_fields')
     field_name = models.CharField(max_length=100)  # Field name provided by end user
     field_value = models.CharField(max_length=255)  # Field value provided by end user
     data_type = models.CharField(max_length=20, choices=FIELD_TYPES,null=True,blank =True)
+    dropdown_values = models.JSONField(null=True, blank=True)
+    radio_values = models.JSONField(null=True, blank=True)
+    selectbox_values = models.JSONField(null=True, blank=True)
+    
 
     def save(self, *args, **kwargs):
         if self.data_type == 'char':
@@ -220,6 +260,41 @@ class EmpFamily_CustomField(models.Model):
                 self.boolean_field = False
             else:
                 raise ValidationError({'field_value': ['Invalid boolean value. Accepted values are: true, false, 1, 0, yes, no.']})
+
+        elif self.data_type == 'dropdown':
+            try:
+                # Split the field_value by comma and store as dropdown values
+                dropdown_values_list = [value.strip() for value in self.field_value.split(',')]
+                self.dropdown_values = dropdown_values_list
+            except Exception as e:
+                # Handle exceptions here
+                pass
+        
+        elif self.data_type == 'radio':
+            try:
+                # Split the field_value by comma and store as radio button values
+                radio_values_list = [value.strip() for value in self.field_value.split(',')]
+                self.radio_values = radio_values_list
+            except Exception as e:
+                # Handle exceptions here
+                pass
+
+        elif self.data_type == 'select':
+            try:
+                # Split the field_value by comma and store as select box values
+                selectbox_values_list = [value.strip() for value in self.field_value.split(',')]
+                self.selectbox_values = selectbox_values_list
+            except Exception as e:
+                # Handle exceptions here
+                pass
+
+        
+        elif self.data_type == 'text':
+            # Perform validation for text type if needed
+            #  check if the length of the text is within acceptable limits
+            if len(self.field_value) > 2000:
+                raise ValidationError({'field_value': ['Text exceeds maximum length.']})
+
 
         super().save(*args, **kwargs)
 
@@ -248,12 +323,18 @@ class EmpJobHistory_CustomField(models.Model):
         ('date', 'DateField'),
         ('email', 'EmailField'),
         ('integer', 'IntegerField'),
-        ('boolean', 'BooleanField'),)
+        ('boolean', 'BooleanField'),
+        ('dropdown', 'DropdownField'),
+        ('text', 'TextField'),
+        ('radio', 'RadioButtonField'),
+        ('select', 'SelectBoxField'),)
     emp_job_history = models.ForeignKey(EmpJobHistory, on_delete=models.CASCADE,related_name='jobhistory_customfields')
     field_name = models.CharField(max_length=100)  # Field name provided by end user
     field_value = models.CharField(max_length=255)  # Field value provided by end user
     data_type = models.CharField(max_length=20, choices=FIELD_TYPES,null=True,blank =True)
-
+    dropdown_values = models.JSONField(null=True, blank=True)
+    radio_values = models.JSONField(null=True, blank=True)
+    selectbox_values = models.JSONField(null=True, blank=True)
     
     def save(self, *args, **kwargs):
         if self.data_type == 'char':
@@ -288,6 +369,40 @@ class EmpJobHistory_CustomField(models.Model):
                 self.boolean_field = False
             else:
                 raise ValidationError({'field_value': ['Invalid boolean value. Accepted values are: true, false, 1, 0, yes, no.']})
+
+        elif self.data_type == 'dropdown':
+            try:
+                # Split the field_value by comma and store as dropdown values
+                dropdown_values_list = [value.strip() for value in self.field_value.split(',')]
+                self.dropdown_values = dropdown_values_list
+            except Exception as e:
+                # Handle exceptions here
+                pass
+        
+        elif self.data_type == 'radio':
+            try:
+                # Split the field_value by comma and store as radio button values
+                radio_values_list = [value.strip() for value in self.field_value.split(',')]
+                self.radio_values = radio_values_list
+            except Exception as e:
+                # Handle exceptions here
+                pass
+
+        elif self.data_type == 'select':
+            try:
+                # Split the field_value by comma and store as select box values
+                selectbox_values_list = [value.strip() for value in self.field_value.split(',')]
+                self.selectbox_values = selectbox_values_list
+            except Exception as e:
+                # Handle exceptions here
+                pass
+
+        
+        elif self.data_type == 'text':
+            # Perform validation for text type if needed
+            #  check if the length of the text is within acceptable limits
+            if len(self.field_value) > 2000:
+                raise ValidationError({'field_value': ['Text exceeds maximum length.']})
 
         super().save(*args, **kwargs)
 
@@ -316,12 +431,19 @@ class EmpQualification_CustomField(models.Model):
         ('date', 'DateField'),
         ('email', 'EmailField'),
         ('integer', 'IntegerField'),
-        ('boolean', 'BooleanField'),)
+        ('boolean', 'BooleanField'),
+        ('dropdown', 'DropdownField'),
+        ('text', 'TextField'),
+        ('radio', 'RadioButtonField'),
+        ('select', 'SelectBoxField'),
+        )
     emp_qualification = models.ForeignKey(EmpQualification, on_delete=models.CASCADE,related_name='custom_fields')
     field_name = models.CharField(max_length=100)  # Field name provided by end user
     field_value = models.CharField(max_length=255)  # Field value provided by end user
     data_type = models.CharField(max_length=20, choices=FIELD_TYPES,null=True,blank =True)
-
+    dropdown_values = models.JSONField(null=True, blank=True)
+    radio_values = models.JSONField(null=True, blank=True)
+    selectbox_values = models.JSONField(null=True, blank=True)
     
     def save(self, *args, **kwargs):
         if self.data_type == 'char':
@@ -356,6 +478,41 @@ class EmpQualification_CustomField(models.Model):
                 self.boolean_field = False
             else:
                 raise ValidationError({'field_value': ['Invalid boolean value. Accepted values are: true, false, 1, 0, yes, no.']})
+
+        elif self.data_type == 'dropdown':
+            try:
+                # Split the field_value by comma and store as dropdown values
+                dropdown_values_list = [value.strip() for value in self.field_value.split(',')]
+                self.dropdown_values = dropdown_values_list
+            except Exception as e:
+                # Handle exceptions here
+                pass
+        
+        elif self.data_type == 'radio':
+            try:
+                # Split the field_value by comma and store as radio button values
+                radio_values_list = [value.strip() for value in self.field_value.split(',')]
+                self.radio_values = radio_values_list
+            except Exception as e:
+                # Handle exceptions here
+                pass
+
+        elif self.data_type == 'select':
+            try:
+                # Split the field_value by comma and store as select box values
+                selectbox_values_list = [value.strip() for value in self.field_value.split(',')]
+                self.selectbox_values = selectbox_values_list
+            except Exception as e:
+                # Handle exceptions here
+                pass
+
+        
+        elif self.data_type == 'text':
+            # Perform validation for text type if needed
+            #  check if the length of the text is within acceptable limits
+            if len(self.field_value) > 2000:
+                raise ValidationError({'field_value': ['Text exceeds maximum length.']})
+
 
         super().save(*args, **kwargs)
 
@@ -385,12 +542,18 @@ class EmpDocuments_CustomField(models.Model):
         ('date', 'DateField'),
         ('email', 'EmailField'),
         ('integer', 'IntegerField'),
-        ('boolean', 'BooleanField'),)
+        ('boolean', 'BooleanField'),
+        ('dropdown', 'DropdownField'),
+        ('text', 'TextField'),
+        ('radio', 'RadioButtonField'),
+        ('select', 'SelectBoxField'),)
     emp_documents = models.ForeignKey(Emp_Documents, on_delete=models.CASCADE,related_name='custom_fields')
     field_name = models.CharField(max_length=100)  # Field name provided by end user
     field_value = models.CharField(max_length=255)  # Field value provided by end user
     data_type = models.CharField(max_length=20, choices=FIELD_TYPES,null=True,blank =True)
-    
+    dropdown_values = models.JSONField(null=True, blank=True)
+    radio_values = models.JSONField(null=True, blank=True)
+    selectbox_values = models.JSONField(null=True, blank=True)
     
     def save(self, *args, **kwargs):
         if self.data_type == 'char':
@@ -425,6 +588,40 @@ class EmpDocuments_CustomField(models.Model):
                 self.boolean_field = False
             else:
                 raise ValidationError({'field_value': ['Invalid boolean value. Accepted values are: true, false, 1, 0, yes, no.']})
+        elif self.data_type == 'dropdown':
+            try:
+                # Split the field_value by comma and store as dropdown values
+                dropdown_values_list = [value.strip() for value in self.field_value.split(',')]
+                self.dropdown_values = dropdown_values_list
+            except Exception as e:
+                # Handle exceptions here
+                pass
+        
+        elif self.data_type == 'radio':
+            try:
+                # Split the field_value by comma and store as radio button values
+                radio_values_list = [value.strip() for value in self.field_value.split(',')]
+                self.radio_values = radio_values_list
+            except Exception as e:
+                # Handle exceptions here
+                pass
+
+        elif self.data_type == 'select':
+            try:
+                # Split the field_value by comma and store as select box values
+                selectbox_values_list = [value.strip() for value in self.field_value.split(',')]
+                self.selectbox_values = selectbox_values_list
+            except Exception as e:
+                # Handle exceptions here
+                pass
+
+        
+        elif self.data_type == 'text':
+            # Perform validation for text type if needed
+            #  check if the length of the text is within acceptable limits
+            if len(self.field_value) > 2000:
+                raise ValidationError({'field_value': ['Text exceeds maximum length.']})
+
 
         super().save(*args, **kwargs)
 
