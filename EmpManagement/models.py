@@ -118,6 +118,24 @@ class Emp_CustomField(models.Model):
     selectbox_values = models.JSONField(null=True, blank=True)
     
     def save(self, *args, **kwargs):
+        # if not self.data_type:
+        #     if self.field_value.isdigit():
+        #         self.data_type = 'integer'
+        #     elif self.field_value.lower() in ['true', 'false', '1', '0', 'yes', 'no']:
+        #         self.data_type = 'boolean'
+        #     else:
+        #         try:
+        #             # Attempt to parse as date
+        #             datetime.datetime.strptime(self.field_value, '%d-%m-%Y')
+        #             self.data_type = 'date'
+        #         except ValueError:
+        #             # If commas are present, assume it's a list of values
+        #             if ',' in self.field_value:
+        #                 self.data_type = 'dropdown'  # Or whichever data type suits your business logic
+        #             else:
+        #                 # Default to char field if no other inference can be made
+        #                 self.data_type = 'char'
+
         if self.data_type == 'char':
             self.char_field = self.field_value
         elif self.data_type == 'date':
@@ -228,6 +246,28 @@ class EmpFamily_CustomField(models.Model):
     
 
     def save(self, *args, **kwargs):
+        # Infer data type if not provided
+        if not self.data_type:
+            if self.field_value.isdigit():
+                self.data_type = 'integer'
+            elif self.field_value.lower() in ['true', 'false', '1', '0', 'yes', 'no']:
+                self.data_type = 'boolean'
+            else:
+                try:
+                    # Attempt to parse as date
+                    datetime.datetime.strptime(self.field_value, '%d-%m-%Y')
+                    self.data_type = 'date'
+                except ValueError:
+                    # If commas are present, assume it's a list of values
+                    if ',' in self.field_value:
+                        self.data_type = 'dropdown'  # Or whichever data type suits your business logic
+                    else:
+                        # Default to char field if no other inference can be made
+                        self.data_type = 'char'
+
+
+
+
         if self.data_type == 'char':
             self.char_field = self.field_value
         elif self.data_type == 'date':

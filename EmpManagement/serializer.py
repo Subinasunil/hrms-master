@@ -3,6 +3,7 @@ from rest_framework import serializers
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from UserManagement.serializers import CustomUserSerializer
+import pandas as pd
 
 
 from .models import (emp_family,EmpJobHistory,EmpQualification,Emp_Documents,EmpLeaveRequest,emp_master,Emp_CustomField,
@@ -151,15 +152,6 @@ class EmpSerializer(serializers.ModelSerializer):
 
 
 
-# class EmpCustomFieldSerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = Emp_CustomField
-#         fields = '__all__'
-#     def validate_data_type(self, value):
-#         valid_data_types = ['char', 'integer', 'boolean', 'email', 'date']
-#         if value not in valid_data_types:
-#             raise serializers.ValidationError(f"Invalid data type. Allowed values are: {', '.join(valid_data_types)}.")
-#         return value
 
 
 class EmpBulkUploadSerializer(serializers.ModelSerializer):
@@ -176,4 +168,4 @@ class EmpBulkUploadSerializer(serializers.ModelSerializer):
             Emp_CustomField.objects.create(emp_family=instance, **custom_field_data)
         return instance
 
-        
+    

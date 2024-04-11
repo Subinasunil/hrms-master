@@ -20,7 +20,9 @@ from django.http import FileResponse,HttpResponse
 from openpyxl import Workbook
 from rest_framework.parsers import MultiPartParser, FormParser
 from .resource import EmployeeResource,EmpResource_Export,EmpCustomFieldResource
+import tablib
 import pandas as pd
+import openpyxl
 import xlsxwriter
 import io
 import os
@@ -384,59 +386,135 @@ class EmpbulkuploadViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     parser_classes = (MultiPartParser, FormParser)
 
+    # @action(detail=False, methods=['post'], parser_classes=[MultiPartParser, FormParser])
+    # def bulk_upload(self, request):
+    #     if request.method == 'POST' and request.FILES.get('file'):
+    #         excel_file = request.FILES['file']
+    #         if excel_file.name.endswith('.xlsx'):
+    #             try:
+    #                 # Load data from the Excel file into a Dataset
+    #                 dataset = Dataset()
+    #                 dataset.load(excel_file.read(), format='xlsx')
+
+    #                 # Create resource instances for Employee and CustomField
+    #                 employee_resource = EmployeeResource()
+    #                 custom_field_resource = EmpCustomFieldResource()
+
+    #                 # Collect errors for Employee resource
+    #                 employee_errors = []
+    #                 with transaction.atomic():
+    #                     for row_idx, row in enumerate(dataset.dict, start=2):  # Start from row 2 (1-based index)
+    #                         try:
+    #                             employee_resource.before_import_row(row, row_idx=row_idx)
+    #                         except ValidationError as e:
+    #                             employee_errors.extend([f"Row {row_idx}: {error}" for error in e.messages])
+
+    #                 # Collect errors for CustomField resource
+    #                 custom_field_errors = []
+    #                 with transaction.atomic():
+    #                     for row_idx, row in enumerate(dataset.dict, start=2):  # Start from row 2 (1-based index)
+    #                         try:
+    #                             custom_field_resource.before_import_row(row, row_idx=row_idx)
+    #                         except ValidationError as e:
+    #                             custom_field_errors.extend([f"Row {row_idx}: {error}" for error in e.messages])
+
+    #                 # Merge errors from both resources
+    #                 all_errors = employee_errors + custom_field_errors
+
+    #                 # If there are any errors, return them
+    #                 if all_errors:
+    #                     return Response({"errors": all_errors}, status=400)
+
+    #                 # If no errors, import valid data into the models
+    #                 with transaction.atomic():
+    #                     employee_result = employee_resource.import_data(dataset, dry_run=False, raise_errors=True)
+    #                     custom_field_result = custom_field_resource.import_data(dataset, dry_run=False, raise_errors=True)
+
+    #                 return Response({"message": f"{employee_result.total_rows} records created successfully"})
+    #             except Exception as e:
+    #                 return Response({"error": str(e)}, status=400)
+    #         else:
+    #             return Response({"error": "Invalid file format. Only Excel files (.xlsx) are supported."}, status=400)
+    #     else:
+    #         return Response({"error": "Please provide an Excel file."}, status=400)
+
+
     @action(detail=False, methods=['post'], parser_classes=[MultiPartParser, FormParser])
     def bulk_upload(self, request):
         if request.method == 'POST' and request.FILES.get('file'):
             excel_file = request.FILES['file']
             if excel_file.name.endswith('.xlsx'):
                 try:
-                    # Load data from the Excel file into a Dataset
-                    dataset = Dataset()
-                    dataset.load(excel_file.read(), format='xlsx')
+                    # Open the Excel file
+                    workbook = openpyxl.load_workbook(excel_file)
+
+                    # Initialize error lists
+                    all_errors_sheet1 = []
+                    all_errors_sheet2 = []
+
+                    # Extract data from each sheet if it exists and is not empty
+                    sheet1 = workbook.get_sheet_by_name('Sheet1')
+                    sheet2 = workbook.get_sheet_by_name('Sheet2')
+
+                    if sheet1 is None or sheet1.max_row == 1:
+                        return Response({"error": "Sheet1 is either missing or empty."}, status=400)
+
+                    if sheet2 is None or sheet2.max_row == 1:
+                        return Response({"error": "Sheet2 is either missing or empty."}, status=400)
+
+                    # Convert data to datasets
+                    dataset_sheet1 = Dataset()
+                    dataset_sheet1.headers = [cell.value for cell in sheet1[1]]
+                    for row_idx, row in enumerate(sheet1.iter_rows(min_row=2), start=2):
+                        dataset_sheet1.append([cell.value for cell in row])
+
+                    dataset_sheet2 = Dataset()
+                    dataset_sheet2.headers = [cell.value for cell in sheet2[1]]
+                    for row_idx, row in enumerate(sheet2.iter_rows(min_row=2), start=2):
+                        dataset_sheet2.append([str(cell.value) for cell in row])
 
                     # Create resource instances for Employee and CustomField
                     employee_resource = EmployeeResource()
                     custom_field_resource = EmpCustomFieldResource()
 
-                    # Collect errors for Employee resource
-                    employee_errors = []
+                    # Validate and collect errors from Sheet1
                     with transaction.atomic():
-                        for row_idx, row in enumerate(dataset.dict, start=2):  # Start from row 2 (1-based index)
+                        for row_idx, row in enumerate(dataset_sheet1.dict, start=2):
                             try:
                                 employee_resource.before_import_row(row, row_idx=row_idx)
-                            except ValidationError as e:
-                                employee_errors.extend([f"Row {row_idx}: {error}" for error in e.messages])
+                            except Exception as e:
+                                all_errors_sheet1.append({"row": row_idx, "error": str(e)})
 
-                    # Collect errors for CustomField resource
-                    custom_field_errors = []
+                    # Validate and collect errors from Sheet2
                     with transaction.atomic():
-                        for row_idx, row in enumerate(dataset.dict, start=2):  # Start from row 2 (1-based index)
+                        for row_idx, row in enumerate(dataset_sheet2.dict, start=2):
                             try:
                                 custom_field_resource.before_import_row(row, row_idx=row_idx)
-                            except ValidationError as e:
-                                custom_field_errors.extend([f"Row {row_idx}: {error}" for error in e.messages])
+                            except Exception as e:
+                                all_errors_sheet2.append({"row": row_idx, "error": str(e)})
 
-                    # Merge errors from both resources
-                    all_errors = employee_errors + custom_field_errors
+                    # Check if there are any errors and return them
+                    if all_errors_sheet1 or all_errors_sheet2:
+                        return Response({"errors_sheet1": all_errors_sheet1, "errors_sheet2": all_errors_sheet2}, status=400)
 
-                    # If there are any errors, return them
-                    if all_errors:
-                        return Response({"errors": all_errors}, status=400)
+                    # If no errors, proceed with importing data
 
-                    # If no errors, import valid data into the models
+                    # Import data from Sheet1 into emp_master table
                     with transaction.atomic():
-                        employee_result = employee_resource.import_data(dataset, dry_run=False, raise_errors=True)
-                        custom_field_result = custom_field_resource.import_data(dataset, dry_run=False, raise_errors=True)
+                        employee_result = employee_resource.import_data(dataset_sheet1, dry_run=False, raise_errors=True)
 
-                    return Response({"message": f"{employee_result.total_rows} records created successfully"})
+                    # Import data from Sheet2 into Emp_CustomField table
+                    with transaction.atomic():
+                        custom_field_result = custom_field_resource.import_data(dataset_sheet2, dry_run=False, raise_errors=True)
+
+                    return Response({"message": f"{employee_result.total_rows} records created for Sheet1, {custom_field_result.total_rows} records created for Sheet2 successfully"})
                 except Exception as e:
                     return Response({"error": str(e)}, status=400)
             else:
                 return Response({"error": "Invalid file format. Only Excel files (.xlsx) are supported."}, status=400)
         else:
             return Response({"error": "Please provide an Excel file."}, status=400)
-
-
+            
 
     @action(detail=False, methods=['get'])  # New endpoint for downloading default file
     def download_default_excel_file(self, request):
