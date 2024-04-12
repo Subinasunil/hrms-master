@@ -111,7 +111,7 @@ class Emp_CustomField(models.Model):
         ('select', 'SelectBoxField'),)
     emp_master = models.ForeignKey(emp_master, on_delete=models.CASCADE,related_name='custom_fields')
     field_name = models.CharField(max_length=100)  # Field name provided by end user
-    field_value = models.CharField(max_length=255)  # Field value provided by end user
+    field_value = models.TextField()  # Field value provided by end user
     data_type = models.CharField(max_length=20, choices=FIELD_TYPES,null=True,blank =True)
     dropdown_values = models.JSONField(null=True, blank=True)
     radio_values = models.JSONField(null=True, blank=True)

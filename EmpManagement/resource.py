@@ -137,120 +137,60 @@ class EmployeeResource(resources.ModelResource):
 
 
 class EmpCustomFieldResource(resources.ModelResource):
+    TEXT_LIMIT_MIN = 1000
+    TEXT_LIMIT_MAX = 1000000
+    DATE_FORMAT = '%d-%m-%Y'
+
+    def __init__(self):
+        self.errors = []
+
+    def before_import_row(self, row, row_idx=None, **kwargs):
+        field_value = row.get('field_value')
+        emp_master_id = row.get('emp_master')
+
+        if field_value is None:
+            row['field_value'] = ""
+            return
+
+        if isinstance(field_value, int) or field_value.isdigit():
+            row['field_value'] = int(field_value)
+        elif isinstance(field_value, str):
+            if re.match(r'\d{2}-\d{2}-\d{4}', field_value):
+                parsed_date = datetime.strptime(field_value, self.DATE_FORMAT).date()
+                row['field_value'] = parsed_date
+            elif field_value.lower() in ['yes', 'no', 'true', 'false', '0', '1']:
+                row['field_value'] = field_value.lower() in ['true', '1']
+            elif re.match(r"[^@]+@[^@]+\.[^@]+", field_value):
+                row['field_value'] = field_value
+            elif len(field_value) > self.TEXT_LIMIT_MIN or ',' in field_value:
+                row['field_value'] = field_value
+            else:
+                row['field_value'] = field_value
+        else:
+            raise ValueError(f"Invalid value '{field_value}' in row {row_idx}. Expected int, str, or None.")
+        
+        if not emp_master.objects.filter(id=emp_master_id).exists():
+            self.errors.append({'row_idx': row_idx, 'error': f"emp_master matching query does not exist for ID: {emp_master_id}"})
+        
+    def after_import_row(self, row, row_result, **kwargs):
+        if row_result.errors:
+            self.errors.append({'row_idx': row_result.row_idx, 'errors': row_result.errors})
+        elif row_result.instance is not None and hasattr(row_result.instance, 'field_value') and isinstance(row_result.instance.field_value, datetime):
+            row_result.instance.field_value = row_result.instance.field_value.date()
+
+    def before_import(self, dataset, using_transactions, dry_run, **kwargs):
+        for row_idx, row in enumerate(dataset.dict, start=2):
+            field_value = row.get('field_value')
+            if field_value is not None and isinstance(field_value, str):
+                if not re.match(r'\d{2}-\d{2}-\d{4}', field_value):
+                    self.errors.append({'row_idx': row_idx, 'errors': [f"Invalid date format '{field_value}'. Please use 'dd-mm-yyyy' format."]})
+    
     
     class Meta:
         model = Emp_CustomField
-        fields = ('id','emp_master','field_name','field_value', 'data_type','dropdown_values','radio_values','selectbox_values') 
+        fields = ('id','emp_master','field_name','field_value') 
     
-    def validate_date_format(self, field_value):
-        try:
-            # Attempt to parse the date string with the expected format 'DD-MM-YYYY'
-            parsed_date = datetime.strptime(field_value, '%d-%m-%Y')
-        except ValueError:
-            raise ValidationError("Invalid date format. Date should be in DD-MM-YYYY format.")
-
-    
-    def before_import_row(self, row, **kwargs):
-        errors = []
-
-        # Validate emp_master
-        emp_master_id = row.get('emp_master')
-        if not emp_master.objects.filter(id=emp_master_id).exists():
-            errors.append(f"emp_master matching query does not exist for ID: {emp_master_id}")
-
-        # Validate data_type field
-        data_type = row.get('data_type')
-        if data_type not in ['char', 'email', 'date', 'integer', 'boolean','dropdown', 'text', 'radio', 'select']:
-            errors.append("Invalid value for data_type field. Allowed values are 'char', 'email', 'date', 'integer', 'boolean','dropdown', 'text', 'radio', 'select'")
-
-        # Validate field_value based on data_type
-        field_value = row.get('field_value')
-        dropdown_values = row.get('dropdown_values')
-        if data_type == 'dropdown' and field_value and dropdown_values:
-            field_values_set = set(value.strip() for value in field_value.split(','))
-            dropdown_values_set = set(eval(dropdown_values))
-            print(f"Field value set: {field_values_set}")
-            print(f"Dropdown values set: {dropdown_values_set}")
-            # Check if any value in field_value matches a value in dropdown_values
-            if not field_values_set.intersection(dropdown_values_set):
-                errors.append("None of the values in field_value match dropdown_values.")
-        
-
-        # Validate field_value based on data_type
-        data_type = row.get('data_type')
-        field_value = row.get('field_value')
-        data_type = row.get('data_type')
-        field_value = row.get('field_value')
-
-        if data_type == 'date':
-            try:
-                self.validate_date_format(field_value)
-            except ValidationError as e:
-                errors.extend(e.messages)
-        
-        if errors:
-            raise ValidationError(errors)
-        # if data_type == 'integer':
-        #     try:
-        #         int(field_value)
-        #     except ValueError:
-        #         errors.append(f"Field value '{field_value}' is not a valid integer for data type 'integer'.")
-
-        # elif data_type == 'boolean':
-        #     if field_value.lower() not in ['true', 'false']:
-        #         errors.append(f"Field value '{field_value}' is not a valid boolean value for data type 'boolean'.")
-
-        # elif data_type == 'date':
-        #     try:
-        #         datetime.strptime(field_value, '%d-%m-%y')
-        #     except ValueError:
-        #         errors.append(f"Field value '{field_value}' is not a valid date format (YYYY-MM-DD) for data type 'date'.")
-
-
-        # # Validate date field format for 'field_value'
-        # date_format_excel = '%Y-%m-%d %H:%M:%S'  # Format from Excel: YYYY-MM-DD HH:MM:SS
-        # date_format = '%d-%m-%Y'  # Format: dd-mm-yyyy
-        # field_value = str(row.get('field_value'))  # Convert to string
-        # print("Field value:", field_value)  # Add debug print
-        # if field_value:
-        #     try:
-        #         # Convert Excel date format to expected date format
-        #         field_value_converted = datetime.strptime(field_value, date_format_excel).strftime(date_format)
-        #         # Validate the converted date value
-        #         datetime.strptime(field_value_converted, date_format)
-        #     except ValueError:
-        #         errors.append({"field_value": ["Invalid date format. Date should be in DD-MM-YYYY format."]})
-        # else:
-        #     errors.append({"field_value": ["Date value for field_value is empty"]})
-                
-        # if field_value:
-        #     if data_type == 'char' and not isinstance(field_value, str):
-        #         errors.append("Invalid field_value for char data type. Expected string.")
-        #     elif data_type == 'email' and not isinstance(field_value, str):
-        #         errors.append("Invalid field_value for email data type. Expected string.")
-            
-            # elif data_type == 'date':
-            #     date_format = '%d-%m-%y'  # Format: dd-mm-yy
-            #     try:
-            #         if isinstance(date_value, datetime):  # Check if value is already a datetime object
-            #             date_value = date_value.strftime('%d-%m-%y')  # Convert datetime object to string
-            #         datetime.strptime(date_value, date_format)
-            #     except ValueError:
-            #         errors.append(f"Invalid date format . Date should be in format dd-mm-yy")
-                                                
-            # elif data_type == 'integer':
-            #     try:
-            #         int(field_value)
-            #     except ValueError:
-            #         errors.append("Invalid field_value for integer data type. Expected integer value.")
-            # elif data_type == 'boolean' and field_value not in ['TRUE', 'FALSE', 'true', 'false', '1', '0','yes','no']:
-            #     errors.append("Invalid field_value for boolean data type. Expected 'True', 'False', 'true', 'false', '1','0','yes','no'")
-
-            # elif data_type == 'dropdown' and field_value not in dropdown_values:
-            #     errors.append("Value in 'field_value' must be one of the values listed in 'dropdown_values'.")
-
-        if errors:
-            raise ValidationError(errors)
+   
 
 
 class EmpResource_Export(resources.ModelResource):
