@@ -20,6 +20,13 @@ class CountrySerializer(serializers.ModelSerializer):
         model = cntry_mstr
         fields = ('id','country_name','is_active','states_set')
 
+class CntryBulkUploadSerializer(serializers.ModelSerializer):  
+    file = serializers.FileField(write_only=True) 
+    class Meta:
+        model = cntry_mstr
+        fields = '__all__'
+
+
 
 
 #CURRENCY SERIALIZER

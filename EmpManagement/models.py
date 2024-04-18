@@ -1,6 +1,7 @@
 
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
+import random
 from UserManagement.models import CustomUser
 from phonenumber_field.modelfields import PhoneNumberField
 from django.core.exceptions import ValidationError
@@ -175,8 +176,7 @@ class Emp_CustomField(models.Model):
                 dropdown_values_list = [value.strip() for value in self.field_value.split(',')]
                 self.dropdown_values = dropdown_values_list
             except Exception as e:
-                # Handle exceptions here
-                pass
+                raise ValidationError({'field_value': ['Invalid dropdown values format.']})
         
         elif self.data_type == 'radio':
             try:
@@ -197,11 +197,11 @@ class Emp_CustomField(models.Model):
                 pass
 
         
-        elif self.data_type == 'text':
-            # Perform validation for text type if needed
-            #  check if the length of the text is within acceptable limits
-            if len(self.field_value) > 2000:
-                raise ValidationError({'field_value': ['Text exceeds maximum length.']})
+        # elif self.data_type == 'text':
+        #     # Perform validation for text type if needed
+        #     #  check if the length of the text is within acceptable limits
+        #     if len(self.field_value) > 2000:
+        #         raise ValidationError({'field_value': ['Text exceeds maximum length.']})
 
         super().save(*args, **kwargs)
     
@@ -530,21 +530,23 @@ class EmpQualification_CustomField(models.Model):
         
         elif self.data_type == 'radio':
             try:
-                # Split the field_value by comma and store as radio button values
                 radio_values_list = [value.strip() for value in self.field_value.split(',')]
                 self.radio_values = radio_values_list
+                self.field_value = random.choice(radio_values_list)  # randomly select a value
             except Exception as e:
-                # Handle exceptions here
-                pass
+                raise ValidationError({'field_value': ['Invalid radio button values format.']})
+
 
         elif self.data_type == 'select':
             try:
-                # Split the field_value by comma and store as select box values
                 selectbox_values_list = [value.strip() for value in self.field_value.split(',')]
                 self.selectbox_values = selectbox_values_list
+                # randomly select multiple values, assuming you want to select up to 3 values
+                selected_values = random.sample(selectbox_values_list, min(len(selectbox_values_list), 3))
+                self.field_value = ','.join(selected_values)  # save selected values as comma-separated string
             except Exception as e:
-                # Handle exceptions here
-                pass
+                raise ValidationError({'field_value': ['Invalid select box values format.']})
+
 
         
         elif self.data_type == 'text':

@@ -4,6 +4,7 @@ from django.db import models
 #COUNTRY MODELS
 class cntry_mstr(models.Model):
 
+    country_code=models.CharField(max_length=150,unique=True,null=True)
     country_name = models.CharField(max_length=50,unique=True)
     is_active = models.BooleanField(default=True)
     def __str__(self):

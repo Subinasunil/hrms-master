@@ -20,6 +20,37 @@ class NumericMobileNumberWidget(Widget):
         return None
 
 class EmployeeResource(resources.ModelResource):
+    emp_login_id = fields.Field(attribute='emp_login_id', column_name='Employee Code')
+    emp_first_name = fields.Field(attribute='emp_first_name',column_name='Employee First Name')
+    Employee_Last_Name = fields.Field(column_name='Employee Last Name')
+    Employee_Gender = fields.Field(column_name='Employee Gender')
+    Employee_Dob = fields.Field(column_name='Employee DOB(DD/MM/YYYY)')
+    emp_personal_email = fields.Field(attribute='emp_personal_email',column_name='Employee Personal Email ID')
+    Employee_Iss = fields.Field(column_name='Is ESS (True/False)')
+    emp_mobile_number_1 = fields.Field(attribute='emp_mobile_number_1',column_name='Employee Personal Mob No')
+    Employee_Number2 = fields.Field(column_name='Employee Company Mobile No')
+    Employee_Countrycode = fields.Field(column_name='Employee Country Code')
+    Employee_State = fields.Field(column_name='Employee State')
+    Employee_City = fields.Field(column_name='Employee City')
+    Employee_Address = fields.Field(column_name='Employee Permanent Address')
+    Employee_Address2 = fields.Field(column_name='Employee Current Address')
+    Employee_Status = fields.Field(column_name='Employee Status(True/False)')
+    Employee_Joining = fields.Field(column_name='Employee Joining Date(DD/MM/YYYY)')
+    Employee_Confirmation = fields.Field(column_name='Employee Confirmation Date(DD/MM/YYYY)')
+    Employee_Religion = fields.Field(column_name='Employee Religion')
+    Employee_Profile = fields.Field(column_name='Employee Profile Picture')
+    Employee_Bloodgroup = fields.Field(column_name='Employee Blood Group')
+    Employee_Nationality = fields.Field(column_name='Employee Nationality')
+    Employee_MaritalStatus = fields.Field(column_name='Employee Marital Status')
+    # Employee_Gender = fields.Field(column_name='Employee Gender')
+    # Employee_Gender = fields.Field(column_name='Employee Gender')
+    # Employee_Gender = fields.Field(column_name='Employee Gender')
+    # Employee_Gender = fields.Field(column_name='Employee Gender')
+    # Employee_Gender = fields.Field(column_name='Employee Gender')
+    # Employee_Gender = fields.Field(column_name='Employee Gender')
+    
+    
+    
     class Meta:
         model = emp_master
        
@@ -76,16 +107,18 @@ class EmployeeResource(resources.ModelResource):
         
         if emp_master.objects.filter(emp_login_id=login_id).exists():
             errors.append(f"Duplicate value found for emp_login_id: {login_id}")
-
+            print(login_id)
+            
         if emp_master.objects.filter(emp_mobile_number_1=mobile_number_1).exists():
             errors.append(f"Duplicate value found for emp_mobile_number_1: {mobile_number_1}")
+            print(mobile_number_1)
 
         if mobile_number_2 and emp_master.objects.filter(emp_mobile_number_2=mobile_number_2).exists():
             errors.append(f"Duplicate value found for emp_mobile_number_2: {mobile_number_2}")
 
         if emp_master.objects.filter(emp_personal_email=personal_email).exists():
             errors.append(f"Duplicate value found for emp_personal_email: {personal_email}")
-
+        print(personal_email)
          # Validating gender field
         gender = row.get('emp_gender')
         if gender and gender not in ['Male', 'Female', 'Other', 'M', 'F', 'O']:
@@ -170,7 +203,7 @@ class EmpCustomFieldResource(resources.ModelResource):
             raise ValueError(f"Invalid value '{field_value}' in row {row_idx}. Expected int, str, or None.")
         
         if not emp_master.objects.filter(id=emp_master_id).exists():
-            self.errors.append({'row_idx': row_idx, 'error': f"emp_master matching query does not exist for ID: {emp_master_id}"})
+            raise ValidationError(f"emp_master matching query does not exist for ID: {emp_master_id}")
         
     def after_import_row(self, row, row_result, **kwargs):
         if row_result.errors:

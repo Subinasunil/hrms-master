@@ -3,6 +3,8 @@ from rest_framework import serializers
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from UserManagement.serializers import CustomUserSerializer
+from django.core.exceptions import ValidationError
+from django.core.validators import validate_email
 import pandas as pd
 
 
@@ -114,7 +116,37 @@ class EmpLeaveRequestSerializer(serializers.ModelSerializer):
 class CustomFieldSerializer(serializers.ModelSerializer):
     class Meta:
         model = Emp_CustomField
-        fields = '__all__'     
+        fields = '__all__' 
+
+    def validate_field_value(self, value):
+        data_type = self.initial_data.get('data_type')
+        if data_type:
+            if data_type == 'integer':
+                try:
+                    int(value)
+                except ValueError:
+                    raise ValidationError("Field value must be an integer.")
+
+            elif data_type == 'email':
+                
+                try:
+                    validate_email(value)
+                except ValidationError:
+                    raise ValidationError("Invalid email address.")
+
+            elif data_type == 'boolean':
+                if value.lower() not in ['true', 'false']:
+                    raise ValidationError("Field value must be 'true' or 'false'.")
+
+            elif data_type == 'date':
+                from datetime import datetime
+                try:
+                    datetime.strptime(value, '%d-%m-%Y')
+                except ValueError:
+                    raise ValidationError("Date must be in the format dd-mm-yyyy.")
+
+        return value
+            
 
 #EMPLOYEE SERIALIZER
 class EmpSerializer(serializers.ModelSerializer):
