@@ -565,7 +565,7 @@ class EmpQualification_CustomField(models.Model):
 class Emp_Documents(models.Model):
     emp_id =models.ForeignKey('emp_master',on_delete = models.CASCADE,related_name='emp_documents')
     emp_sl_no = models.CharField(max_length=50, unique=True, null=True,blank =True,default=None)
-    emp_doc_name = models.CharField(max_length=50)
+    emp_doc_type = models.ForeignKey("Core.Document_type",on_delete = models.CASCADE,null=True,blank =True)
     emp_doc_number = models.IntegerField()
     emp_doc_issued_date = models.DateField()
     emp_doc_expiry_date = models.DateField()

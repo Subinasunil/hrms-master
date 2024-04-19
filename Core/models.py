@@ -29,5 +29,16 @@ class crncy_mstr(models.Model):
     def __str__(self):
         return self.currency_name
 
+#Nationality
 
+class Nationality(models.Model):
+    N_name=models.CharField(max_length=200,null=True,unique=True)
 
+    def __str__(self):
+        return self.N_name
+
+class Document_type(models.Model):
+    doc_type=models.CharField(max_length=120,null=True)
+    description=models.CharField(max_length=200,null=True)
+    def __str__(self):
+        return self.doc_type

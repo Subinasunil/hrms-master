@@ -21,38 +21,50 @@ class NumericMobileNumberWidget(Widget):
 
 class EmployeeResource(resources.ModelResource):
     emp_login_id = fields.Field(attribute='emp_login_id', column_name='Employee Code')
-    emp_first_name = fields.Field(attribute='emp_first_name',column_name='Employee First Name')
-    Employee_Last_Name = fields.Field(column_name='Employee Last Name')
-    Employee_Gender = fields.Field(column_name='Employee Gender')
-    Employee_Dob = fields.Field(column_name='Employee DOB(DD/MM/YYYY)')
-    emp_personal_email = fields.Field(attribute='emp_personal_email',column_name='Employee Personal Email ID')
-    Employee_Iss = fields.Field(column_name='Is ESS (True/False)')
-    emp_mobile_number_1 = fields.Field(attribute='emp_mobile_number_1',column_name='Employee Personal Mob No')
-    Employee_Number2 = fields.Field(column_name='Employee Company Mobile No')
-    Employee_Countrycode = fields.Field(column_name='Employee Country Code')
-    Employee_State = fields.Field(column_name='Employee State')
-    Employee_City = fields.Field(column_name='Employee City')
-    Employee_Address = fields.Field(column_name='Employee Permanent Address')
-    Employee_Address2 = fields.Field(column_name='Employee Current Address')
-    Employee_Status = fields.Field(column_name='Employee Status(True/False)')
-    Employee_Joining = fields.Field(column_name='Employee Joining Date(DD/MM/YYYY)')
-    Employee_Confirmation = fields.Field(column_name='Employee Confirmation Date(DD/MM/YYYY)')
-    Employee_Religion = fields.Field(column_name='Employee Religion')
-    Employee_Profile = fields.Field(column_name='Employee Profile Picture')
-    Employee_Bloodgroup = fields.Field(column_name='Employee Blood Group')
-    Employee_Nationality = fields.Field(column_name='Employee Nationality')
-    Employee_MaritalStatus = fields.Field(column_name='Employee Marital Status')
-    # Employee_Gender = fields.Field(column_name='Employee Gender')
-    # Employee_Gender = fields.Field(column_name='Employee Gender')
-    # Employee_Gender = fields.Field(column_name='Employee Gender')
-    # Employee_Gender = fields.Field(column_name='Employee Gender')
-    # Employee_Gender = fields.Field(column_name='Employee Gender')
-    # Employee_Gender = fields.Field(column_name='Employee Gender')
+    emp_first_name = fields.Field(attribute='emp_first_name', column_name='Employee First Name')
+    emp_last_name = fields.Field(attribute='emp_last_name', column_name='Employee Last Name')
+    emp_gender = fields.Field(attribute='emp_gender', column_name='Employee Gender')
+    emp_date_of_birth = fields.Field(attribute='emp_date_of_birth', column_name='Employee DOB(DD/MM/YYYY)',widget=DateWidget(format='%d/%m/%Y'))
+    emp_personal_email = fields.Field(attribute='emp_personal_email', column_name='Employee Personal Email ID')
+    is_ess = fields.Field(attribute='is_ess', column_name='Iss ESS (True/False)')
+    emp_mobile_number_1 = fields.Field(attribute='emp_mobile_number_1', column_name='Employee Personal Mob No')
+    emp_mobile_number_2 = fields.Field(attribute='emp_mobile_number_2', column_name='Employee Company Mobile No')
+    emp_country_id = fields.Field(attribute='emp_country_id', column_name='Employee Country Code')
+    emp_state_id = fields.Field(attribute='emp_state_id', column_name='Employee State')
+    emp_city = fields.Field(attribute='emp_city', column_name='Employee City')
+    emp_permenent_address = fields.Field(attribute='emp_permenent_address', column_name='Employee Permanent Address')
+    emp_present_address = fields.Field(attribute='emp_present_address', column_name='Employee Current Address')
+    emp_status = fields.Field(attribute='emp_status', column_name='Employee Status(True/False)')
+    emp_hired_date = fields.Field(attribute='emp_hired_date', column_name='Employee Joining Date(DD/MM/YYYY)')
+    emp_active_date = fields.Field(attribute='emp_active_date', column_name='Employee Confirmaton Date(DD/MM/YYYY)')
+    emp_relegion = fields.Field(attribute='emp_relegion', column_name='Employee Religion')
+    emp_profile_pic = fields.Field(attribute='emp_profile_pic', column_name='Employee Profile Picture')
+    emp_blood_group = fields.Field(attribute='emp_blood_group', column_name='Employee Blood Group')
+    emp_nationality = fields.Field(attribute='emp_nationality', column_name='Employee Nationality')
+    emp_marital_status = fields.Field(attribute='emp_marital_status', column_name='Employee Marital Status')
+    emp_father_name = fields.Field(attribute='emp_father_name', column_name='Employee Father Name')
+    emp_mother_name = fields.Field(attribute='emp_mother_name', column_name='Employee Mother Name')
+    emp_posting_location = fields.Field(attribute='emp_posting_location', column_name='Employee Work Location')
+    created_at = fields.Field(attribute='created_at', column_name='Created At')
+    created_by = fields.Field(attribute='created_by', column_name='Created By')
+    updated_at = fields.Field(attribute='updated_at', column_name='Updated At')
+    updated_by = fields.Field(attribute='updated_by', column_name='Updated By')
+    is_active = fields.Field(attribute='is_active', column_name='Employee Active(True/False)')
+    epm_ot_applicable = fields.Field(attribute='epm_ot_applicable', column_name='Employee OT applicable(True/False)')
+    emp_company_id = fields.Field(attribute='emp_company_id', column_name='Employee Company Code')
+    emp_branch_id = fields.Field(attribute='emp_branch_id', column_name='Employee Branch Code')
+    emp_dept_id = fields.Field(attribute='emp_dept_id', column_name='Employee Department Code')
+    emp_desgntn_id = fields.Field(attribute='emp_desgntn_id', column_name='Employee Designation Code')
+    emp_ctgry_id = fields.Field(attribute='emp_ctgry_id', column_name='Employee Category Code')
+    emp_languages = fields.Field(attribute='emp_languages', column_name='Languages')
+
     
     
     
     class Meta:
         model = emp_master
+        skip_unchanged = True
+        report_skipped = False
        
         fields = ('id',
             'emp_login_id',
@@ -99,39 +111,39 @@ class EmployeeResource(resources.ModelResource):
 
     def before_import_row(self, row, **kwargs):
         errors = []
-        login_id = row.get('emp_login_id')
-        mobile_number_1 = row.get('emp_mobile_number_1')
-        mobile_number_2 = row.get('emp_mobile_number_2')
-        personal_email = row.get('emp_personal_email')
+        login_id = row.get('Employee Code')
+        mobile_number_1 = row.get('Employee Personal Mob No')
+        mobile_number_2 = row.get('Employee Company Mobile No')
+        personal_email = row.get('Employee Personal Email ID')
 
         
         if emp_master.objects.filter(emp_login_id=login_id).exists():
-            errors.append(f"Duplicate value found for emp_login_id: {login_id}")
+            errors.append(f"Duplicate value found for Employee Code: {login_id}")
             print(login_id)
             
         if emp_master.objects.filter(emp_mobile_number_1=mobile_number_1).exists():
-            errors.append(f"Duplicate value found for emp_mobile_number_1: {mobile_number_1}")
+            errors.append(f"Duplicate value found for Employee Company Mobile No: {mobile_number_1}")
             print(mobile_number_1)
 
         if mobile_number_2 and emp_master.objects.filter(emp_mobile_number_2=mobile_number_2).exists():
-            errors.append(f"Duplicate value found for emp_mobile_number_2: {mobile_number_2}")
+            errors.append(f"Duplicate value found for Employee Personal Email ID: {mobile_number_2}")
 
         if emp_master.objects.filter(emp_personal_email=personal_email).exists():
-            errors.append(f"Duplicate value found for emp_personal_email: {personal_email}")
+            errors.append(f"Duplicate value found for Employee Personal Email ID: {personal_email}")
         print(personal_email)
          # Validating gender field
-        gender = row.get('emp_gender')
+        gender = row.get('Employee Gender')
         if gender and gender not in ['Male', 'Female', 'Other', 'M', 'F', 'O']:
-            errors.append("Invalid value for gender field. Allowed values are 'Male', 'Female', 'Other', 'M', 'F', or 'O'")
+            errors.append("Invalid value for Employee Gender field. Allowed values are 'Male', 'Female', 'Other', 'M', 'F', or 'O'")
         
-        mobile_number_1 = row.get('emp_mobile_number_1')
+        mobile_number_1 = row.get('Employee Personal Mob No')
         if mobile_number_1:
             try:
                 NumericMobileNumberWidget().clean(mobile_number_1)
             except ValidationError as e:
                 errors.append(str(e))
 
-        mobile_number_2 = row.get('emp_mobile_number_2')
+        mobile_number_2 = row.get('Employee Company Mobile No')
         if mobile_number_2:
             try:
                 NumericMobileNumberWidget().clean(mobile_number_2)
@@ -139,7 +151,7 @@ class EmployeeResource(resources.ModelResource):
                 errors.append(str(e))
 
         # Validate date fields format
-        date_fields = ['emp_date_of_birth', 'emp_hired_date', 'emp_active_date']
+        date_fields = ['Employee DOB(DD/MM/YYYY)', 'Employee Joining Date(DD/MM/YYYY)', 'Employee Confirmaton Date(DD/MM/YYYY)']
         date_format = '%d-%m-%y'  # Format: dd-mm-yy
 
         for field in date_fields:
@@ -154,14 +166,14 @@ class EmployeeResource(resources.ModelResource):
             else:
                 errors.append(f"Date value for {field} is empty")
         # Validate email format
-        email = row.get('emp_personal_email')
+        email = row.get('Employee Personal Email ID')
         if email:
             if not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email):
-                errors.append(f"Invalid email format for emp_personal_email field:{email}")
+                errors.append(f"Invalid email format for Employee Personal Email ID' field:{email}")
 
         
         # Validating marital status field
-        marital_status = row.get('emp_marital_status')
+        marital_status = row.get('Employee Marital Status')
         if marital_status and marital_status not in ['Single', 'Married', 'Other', 'S', 'M', 'D']:
             errors.append("Invalid value for marital status field. Allowed values are 'Single', 'Married', 'Other', 'S', 'M', or 'D'")            
         
@@ -218,10 +230,9 @@ class EmpCustomFieldResource(resources.ModelResource):
                 if not re.match(r'\d{2}-\d{2}-\d{4}', field_value):
                     self.errors.append({'row_idx': row_idx, 'errors': [f"Invalid date format '{field_value}'. Please use 'dd-mm-yyyy' format."]})
     
-    
     class Meta:
         model = Emp_CustomField
-        fields = ('id','emp_master','field_name','field_value') 
+        fields = ('id', 'emp_master', 'field_name', 'field_value') 
     
    
 
