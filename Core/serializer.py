@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import(state_mstr,cntry_mstr,crncy_mstr)
+from .models import(state_mstr,cntry_mstr,crncy_mstr,Document_type)
 #STATE SERIALIZER
 class StateSerializer(serializers.ModelSerializer):
     class Meta:
@@ -26,7 +26,11 @@ class CntryBulkUploadSerializer(serializers.ModelSerializer):
         model = cntry_mstr
         fields = '__all__'
 
-
+#document serializer
+class DocumentTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Document_type
+        fields= '__all__'
 
 
 #CURRENCY SERIALIZER

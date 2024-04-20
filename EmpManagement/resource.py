@@ -1,11 +1,13 @@
 from import_export import resources,fields
 from datetime import datetime
-from .models import emp_master, Emp_CustomField
+from .models import emp_master, Emp_CustomField,Emp_Documents
 from import_export.widgets import DateWidget
 from import_export.widgets import Widget
 from django.core.exceptions import ValidationError
 from django.db import models
 import re
+from Core.models import Document_type
+from OrganisationManager.models import cmpny_mastr,brnch_mstr
 
 
 
@@ -176,9 +178,20 @@ class EmployeeResource(resources.ModelResource):
         marital_status = row.get('Employee Marital Status')
         if marital_status and marital_status not in ['Single', 'Married', 'Other', 'S', 'M', 'D']:
             errors.append("Invalid value for marital status field. Allowed values are 'Single', 'Married', 'Other', 'S', 'M', or 'D'")            
-        
-        if errors:
-            raise ValidationError(errors)
+        # Get foreign key values from the row
+        # company_id = row.get('Employee Company Code')
+
+        # # Validate and retrieve company instance
+        # try:
+        #     company_instance = cmpny_mastr.objects.get(id=company_id)
+        # except cmpny_mastr.DoesNotExist:
+        #     errors.append(f"Company with ID '{company_id}' does not exist.")
+        #     raise ValidationError(errors)
+
+        # # Assign company instance to the row
+        # row['emp_company_id'] = company_instance
+        # if errors:
+        #     raise ValidationError(errors)
 
 
 class EmpCustomFieldResource(resources.ModelResource):
@@ -234,7 +247,74 @@ class EmpCustomFieldResource(resources.ModelResource):
         model = Emp_CustomField
         fields = ('id', 'emp_master', 'field_name', 'field_value') 
     
-   
+class DocumentResource(resources.ModelResource):
+    # emp_id = fields.Field(attribute='emp_id', column_name='Employee ID')
+    # emp_sl_no = fields.Field(attribute='emp_sl_no', column_name='SerialNo')
+    # emp_doc_type = fields.Field(attribute='emp_doc_type', column_name='Document Type')
+    # emp_doc_number = fields.Field(attribute='emp_doc_number', column_name='Document Number')
+    # emp_doc_issued_date = fields.Field(attribute='emp_doc_issued_date', column_name='Document Issued Date')
+    # emp_doc_expiry_date = fields.Field(attribute='emp_doc_expiry_date', column_name='Document Expiry Date')
+
+    
+    class Meta:
+        model = Emp_Documents
+        # skip_unchanged = True
+        # report_skipped = False
+       
+        fields = ('id',
+                  'emp_id',
+                  'emp_sl_no',
+                  'emp_doc_type',
+                  'emp_doc_number',
+                  'emp_doc_issued_date',
+                  'emp_doc_expiry_date',
+        )
+    # def __init__(self, *args, **kwargs):
+    #     super().__init__(*args, **kwargs)
+    #     self.errors = []
+
+    def before_import_row(self, row, **kwargs):
+        errors = []
+        
+        
+        employee_id = row.get('emp_id')
+        doc_type_id = row.get('emp_doc_type')
+        
+        # Validate emp_id and emp_doc_type
+        if not emp_master.objects.filter(id=employee_id).exists():
+            errors.append(f"emp_master matching query does not exist for ID: {employee_id}")
+            # row_errors['emp_id'] = f"emp_master matching query does not exist for ID: {employee_id}"
+        if not Document_type.objects.filter(id=doc_type_id).exists():
+            errors.append(f"Document_type matching query does not exist for ID: {doc_type_id}")
+            
+        
+        # Validate date fields format
+        date_fields = ['emp_doc_issued_date', 'emp_doc_expiry_date']
+        date_format = '%d-%m-%y'  # Format: dd-mm-yy
+
+        for field in date_fields:
+            date_value = row.get(field)
+            if date_value:
+                try:
+                    if isinstance(date_value, datetime):  # Check if value is already a datetime object
+                        date_value = date_value.strftime('%d-%m-%y')  # Convert datetime object to string
+                    datetime.strptime(date_value, date_format)
+                except ValueError:
+                    errors.append(f"Invalid date format for {field}. Date should be in format dd-mm-yy")
+                    
+            else:
+                errors.append(f"Date value for {field} is empty")
+                
+
+        
+        if errors:
+            raise ValidationError(errors)
+
+
+       
+
+
+
 
 
 class EmpResource_Export(resources.ModelResource):

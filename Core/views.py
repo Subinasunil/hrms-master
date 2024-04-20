@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from django.contrib import messages
-from .models import (state_mstr,crncy_mstr,cntry_mstr)
-from .serializer import (CountrySerializer,StateSerializer,CurrencySerializer,CntryBulkUploadSerializer)
+from .models import (state_mstr,crncy_mstr,cntry_mstr,Document_type)
+from .serializer import (CountrySerializer,StateSerializer,CurrencySerializer,CntryBulkUploadSerializer,DocumentTypeSerializer)
 from rest_framework.decorators import action
 from rest_framework import viewsets
 from rest_framework.response import Response
@@ -113,6 +113,12 @@ class CurrencyViewSet(viewsets.ModelViewSet):
     serializer_class = CurrencySerializer
     # authentication_classes = [SessionAuthentication,]
     permission_classes = [IsAdminUser,] 
-    
+
+#DocumentType 
+class DocumentTypeViewSet(viewsets.ModelViewSet):
+    queryset = Document_type.objects.all()
+    serializer_class = DocumentTypeSerializer
+    # authentication_classes = [SessionAuthentication,]
+    permission_classes = [IsAdminUser,]
 
 

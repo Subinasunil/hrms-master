@@ -97,7 +97,15 @@ class DocumentSerializer(serializers.ModelSerializer):
         if instance.emp_id:  # Check if emp_state_id is not None
             rep['emp_id'] = instance.emp_id.emp_first_name + " " + instance.emp_id.emp_last_name
         return rep
- 
+
+class DocBulkuploadSerializer(serializers.ModelSerializer):
+    file = serializers.FileField(write_only=True) 
+    class Meta:
+        model = Emp_Documents
+        fields = '__all__'
+
+
+
 
 # EMPLOYEE LEAVE REQUEST
 
