@@ -245,98 +245,112 @@ class EmpFamily_CustomField(models.Model):
     selectbox_values = models.JSONField(null=True, blank=True)
     
 
-    def save(self, *args, **kwargs):
-        # Infer data type if not provided
-        if not self.data_type:
-            if self.field_value.isdigit():
-                self.data_type = 'integer'
-            elif self.field_value.lower() in ['true', 'false', '1', '0', 'yes', 'no']:
-                self.data_type = 'boolean'
-            else:
+    # def save(self, *args, **kwargs):
+    #     # Infer data type if not provided
+    #     if not self.data_type:
+    #         if self.field_value.isdigit():
+    #             self.data_type = 'integer'
+    #         elif self.field_value.lower() in ['true', 'false', '1', '0', 'yes', 'no']:
+    #             self.data_type = 'boolean'
+    #         else:
+    #             try:
+    #                 # Attempt to parse as date
+    #                 datetime.datetime.strptime(self.field_value, '%d-%m-%Y')
+    #                 self.data_type = 'date'
+    #             except ValueError:
+    #                 # If commas are present, assume it's a list of values
+    #                 if ',' in self.field_value:
+    #                     self.data_type = 'dropdown'  # Or whichever data type suits your business logic
+    #                 else:
+    #                     # Default to char field if no other inference can be made
+    #                     self.data_type = 'char'
+
+    def clean(self):
+        if self.data_type:
+            if self.data_type == 'integer':
                 try:
-                    # Attempt to parse as date
-                    datetime.datetime.strptime(self.field_value, '%d-%m-%Y')
-                    self.data_type = 'date'
+                    int(self.field_value)
                 except ValueError:
-                    # If commas are present, assume it's a list of values
-                    if ',' in self.field_value:
-                        self.data_type = 'dropdown'  # Or whichever data type suits your business logic
-                    else:
-                        # Default to char field if no other inference can be made
-                        self.data_type = 'char'
+                    raise ValidationError({'field_value': 'Please enter a valid integer.'})
+            elif self.data_type == 'boolean':
+                if self.field_value.lower() not in ['true', 'false']:
+                    raise ValidationError({'field_value': 'Please enter either true or false.'})
+            elif self.data_type == 'date':
+                try:
+                    datetime.datetime.strptime(self.field_value, '%d-%m-%Y')
+                except ValueError:
+                    raise ValidationError({'field_value': 'Please enter the date in the format dd-mm-yyyy.'})
 
 
+    #     if self.data_type == 'char':
+    #         self.char_field = self.field_value
+    #     elif self.data_type == 'date':
+    #         try:
+    #             # Corrected date format
+    #             self.date_field = datetime.datetime.strptime(self.field_value, '%d-%m-%Y').date()
+    #         except ValueError:
+    #             raise ValidationError({'field_value': ['Invalid date format. Date should be in DD-MM-YYYY format.']})
+    #     elif self.data_type == 'email':
+    #         self.email_field = self.field_value
+    #         try:
+    #             # Validate email format
+    #             validate_email(self.field_value)
+    #         except ValidationError as e:
+    #             # Raise ValidationError with custom error message
+    #             raise ValidationError({'field_value': ['Invalid email format.']})
+    #         self.email_field = self.field_value
+    #     elif self.data_type == 'integer':
+    #         try:
+    #             # Validate if field_value can be converted to integer
+    #             int(self.field_value)
+    #         except ValueError:
+    #             raise ValidationError({'field_value': ['Invalid integer value.']})
+    #         self.integer_field = int(self.field_value)
 
+    #     elif self.data_type == 'boolean':
+    #         if self.field_value.lower() in ['true', '1', 'yes']:
+    #             self.boolean_field = True
+    #         elif self.field_value.lower() in ['false', '0', 'no']:
+    #             self.boolean_field = False
+    #         else:
+    #             raise ValidationError({'field_value': ['Invalid boolean value. Accepted values are: true, false, 1, 0, yes, no.']})
 
-        if self.data_type == 'char':
-            self.char_field = self.field_value
-        elif self.data_type == 'date':
-            try:
-                # Corrected date format
-                self.date_field = datetime.datetime.strptime(self.field_value, '%d-%m-%Y').date()
-            except ValueError:
-                raise ValidationError({'field_value': ['Invalid date format. Date should be in DD-MM-YYYY format.']})
-        elif self.data_type == 'email':
-            self.email_field = self.field_value
-            try:
-                # Validate email format
-                validate_email(self.field_value)
-            except ValidationError as e:
-                # Raise ValidationError with custom error message
-                raise ValidationError({'field_value': ['Invalid email format.']})
-            self.email_field = self.field_value
-        elif self.data_type == 'integer':
-            try:
-                # Validate if field_value can be converted to integer
-                int(self.field_value)
-            except ValueError:
-                raise ValidationError({'field_value': ['Invalid integer value.']})
-            self.integer_field = int(self.field_value)
-
-        elif self.data_type == 'boolean':
-            if self.field_value.lower() in ['true', '1', 'yes']:
-                self.boolean_field = True
-            elif self.field_value.lower() in ['false', '0', 'no']:
-                self.boolean_field = False
-            else:
-                raise ValidationError({'field_value': ['Invalid boolean value. Accepted values are: true, false, 1, 0, yes, no.']})
-
-        elif self.data_type == 'dropdown':
-            try:
-                # Split the field_value by comma and store as dropdown values
-                dropdown_values_list = [value.strip() for value in self.field_value.split(',')]
-                self.dropdown_values = dropdown_values_list
-            except Exception as e:
-                # Handle exceptions here
-                pass
+    #     elif self.data_type == 'dropdown':
+    #         try:
+    #             # Split the field_value by comma and store as dropdown values
+    #             dropdown_values_list = [value.strip() for value in self.field_value.split(',')]
+    #             self.dropdown_values = dropdown_values_list
+    #         except Exception as e:
+    #             # Handle exceptions here
+    #             pass
         
-        elif self.data_type == 'radio':
-            try:
-                # Split the field_value by comma and store as radio button values
-                radio_values_list = [value.strip() for value in self.field_value.split(',')]
-                self.radio_values = radio_values_list
-            except Exception as e:
-                # Handle exceptions here
-                pass
+    #     elif self.data_type == 'radio':
+    #         try:
+    #             # Split the field_value by comma and store as radio button values
+    #             radio_values_list = [value.strip() for value in self.field_value.split(',')]
+    #             self.radio_values = radio_values_list
+    #         except Exception as e:
+    #             # Handle exceptions here
+    #             pass
 
-        elif self.data_type == 'select':
-            try:
-                # Split the field_value by comma and store as select box values
-                selectbox_values_list = [value.strip() for value in self.field_value.split(',')]
-                self.selectbox_values = selectbox_values_list
-            except Exception as e:
-                # Handle exceptions here
-                pass
+    #     elif self.data_type == 'select':
+    #         try:
+    #             # Split the field_value by comma and store as select box values
+    #             selectbox_values_list = [value.strip() for value in self.field_value.split(',')]
+    #             self.selectbox_values = selectbox_values_list
+    #         except Exception as e:
+    #             # Handle exceptions here
+    #             pass
 
         
-        elif self.data_type == 'text':
-            # Perform validation for text type if needed
-            #  check if the length of the text is within acceptable limits
-            if len(self.field_value) > 2000:
-                raise ValidationError({'field_value': ['Text exceeds maximum length.']})
+    #     elif self.data_type == 'text':
+    #         # Perform validation for text type if needed
+    #         #  check if the length of the text is within acceptable limits
+    #         if len(self.field_value) > 2000:
+    #             raise ValidationError({'field_value': ['Text exceeds maximum length.']})
 
 
-        super().save(*args, **kwargs)
+    #     super().save(*args, **kwargs)
 
 #EMPLOPYEE JOB HISTORY
 class EmpJobHistory(models.Model):

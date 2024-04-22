@@ -6,8 +6,9 @@ from import_export.widgets import Widget
 from django.core.exceptions import ValidationError
 from django.db import models
 import re
-from Core.models import Document_type
-from OrganisationManager.models import cmpny_mastr,brnch_mstr
+from Core.models import Document_type,state_mstr,cntry_mstr
+from OrganisationManager.models import cmpny_mastr,brnch_mstr,ctgry_master,dept_master,desgntn_master
+from import_export.widgets import ForeignKeyWidget
 
 
 
@@ -31,8 +32,8 @@ class EmployeeResource(resources.ModelResource):
     is_ess = fields.Field(attribute='is_ess', column_name='Iss ESS (True/False)')
     emp_mobile_number_1 = fields.Field(attribute='emp_mobile_number_1', column_name='Employee Personal Mob No')
     emp_mobile_number_2 = fields.Field(attribute='emp_mobile_number_2', column_name='Employee Company Mobile No')
-    emp_country_id = fields.Field(attribute='emp_country_id', column_name='Employee Country Code')
-    emp_state_id = fields.Field(attribute='emp_state_id', column_name='Employee State')
+    emp_country_id = fields.Field(attribute='emp_country_id', column_name='Employee Country Code',widget=ForeignKeyWidget(cntry_mstr, 'id'))
+    emp_state_id = fields.Field(attribute='emp_state_id', column_name='Employee State',widget=ForeignKeyWidget(state_mstr, 'id'))
     emp_city = fields.Field(attribute='emp_city', column_name='Employee City')
     emp_permenent_address = fields.Field(attribute='emp_permenent_address', column_name='Employee Permanent Address')
     emp_present_address = fields.Field(attribute='emp_present_address', column_name='Employee Current Address')
@@ -47,17 +48,17 @@ class EmployeeResource(resources.ModelResource):
     emp_father_name = fields.Field(attribute='emp_father_name', column_name='Employee Father Name')
     emp_mother_name = fields.Field(attribute='emp_mother_name', column_name='Employee Mother Name')
     emp_posting_location = fields.Field(attribute='emp_posting_location', column_name='Employee Work Location')
-    created_at = fields.Field(attribute='created_at', column_name='Created At')
-    created_by = fields.Field(attribute='created_by', column_name='Created By')
-    updated_at = fields.Field(attribute='updated_at', column_name='Updated At')
-    updated_by = fields.Field(attribute='updated_by', column_name='Updated By')
+    # created_at = fields.Field(attribute='created_at', column_name='Created At')
+    # created_by = fields.Field(attribute='created_by', column_name='Created By')
+    # updated_at = fields.Field(attribute='updated_at', column_name='Updated At')
+    # updated_by = fields.Field(attribute='updated_by', column_name='Updated By')
     is_active = fields.Field(attribute='is_active', column_name='Employee Active(True/False)')
     epm_ot_applicable = fields.Field(attribute='epm_ot_applicable', column_name='Employee OT applicable(True/False)')
-    emp_company_id = fields.Field(attribute='emp_company_id', column_name='Employee Company Code')
-    emp_branch_id = fields.Field(attribute='emp_branch_id', column_name='Employee Branch Code')
-    emp_dept_id = fields.Field(attribute='emp_dept_id', column_name='Employee Department Code')
-    emp_desgntn_id = fields.Field(attribute='emp_desgntn_id', column_name='Employee Designation Code')
-    emp_ctgry_id = fields.Field(attribute='emp_ctgry_id', column_name='Employee Category Code')
+    emp_company_id = fields.Field(attribute='emp_company_id', column_name='Employee Company Code',widget=ForeignKeyWidget(cmpny_mastr, 'id'))
+    emp_branch_id = fields.Field(attribute='emp_branch_id', column_name='Employee Branch Code',widget=ForeignKeyWidget(brnch_mstr, 'id'))
+    emp_dept_id = fields.Field(attribute='emp_dept_id', column_name='Employee Department Code',widget=ForeignKeyWidget(dept_master, 'id'))
+    emp_desgntn_id = fields.Field(attribute='emp_desgntn_id', column_name='Employee Designation Code',widget=ForeignKeyWidget(desgntn_master, 'id'))
+    emp_ctgry_id = fields.Field(attribute='emp_ctgry_id', column_name='Employee Category Code',widget=ForeignKeyWidget(ctgry_master, 'id'))
     emp_languages = fields.Field(attribute='emp_languages', column_name='Languages')
 
     
@@ -65,8 +66,8 @@ class EmployeeResource(resources.ModelResource):
     
     class Meta:
         model = emp_master
-        skip_unchanged = True
-        report_skipped = False
+        # skip_unchanged = True
+        # report_skipped = False
        
         fields = ('id',
             'emp_login_id',
@@ -94,10 +95,10 @@ class EmployeeResource(resources.ModelResource):
             'emp_father_name',
             'emp_mother_name',
             'emp_posting_location',
-            'created_at',
-            'created_by',
-            'updated_at',
-            'updated_by',
+            # 'created_at',
+            # 'created_by',
+            # 'updated_at',
+            # 'updated_by',
             'is_active',
             'epm_ot_applicable',
             'emp_company_id',
@@ -121,18 +122,18 @@ class EmployeeResource(resources.ModelResource):
         
         if emp_master.objects.filter(emp_login_id=login_id).exists():
             errors.append(f"Duplicate value found for Employee Code: {login_id}")
-            print(login_id)
+           
             
         if emp_master.objects.filter(emp_mobile_number_1=mobile_number_1).exists():
             errors.append(f"Duplicate value found for Employee Company Mobile No: {mobile_number_1}")
-            print(mobile_number_1)
+            
 
         if mobile_number_2 and emp_master.objects.filter(emp_mobile_number_2=mobile_number_2).exists():
             errors.append(f"Duplicate value found for Employee Personal Email ID: {mobile_number_2}")
 
         if emp_master.objects.filter(emp_personal_email=personal_email).exists():
             errors.append(f"Duplicate value found for Employee Personal Email ID: {personal_email}")
-        print(personal_email)
+        
          # Validating gender field
         gender = row.get('Employee Gender')
         if gender and gender not in ['Male', 'Female', 'Other', 'M', 'F', 'O']:
@@ -177,34 +178,46 @@ class EmployeeResource(resources.ModelResource):
         # Validating marital status field
         marital_status = row.get('Employee Marital Status')
         if marital_status and marital_status not in ['Single', 'Married', 'Other', 'S', 'M', 'D']:
-            errors.append("Invalid value for marital status field. Allowed values are 'Single', 'Married', 'Other', 'S', 'M', or 'D'")            
-        # Get foreign key values from the row
-        # company_id = row.get('Employee Company Code')
+            errors.append("Invalid value for marital status field. Allowed values are 'Single', 'Married', 'Other', 'S', 'M', or 'D'")      
+        
+        # emp_company_code = row.get('Employee Company ID')
 
-        # # Validate and retrieve company instance
+        # if emp_company_code is None:
+        #     # Skip the assignment if the value is None
+        #     return
+
+        # # Check if cmpny_mastr with the given code exists
         # try:
-        #     company_instance = cmpny_mastr.objects.get(id=company_id)
+        #     company_instance = cmpny_mastr.objects.get(code=emp_company_code)
+        #     row['emp_company_id'] = company_instance
         # except cmpny_mastr.DoesNotExist:
-        #     errors.append(f"Company with ID '{company_id}' does not exist.")
-        #     raise ValidationError(errors)
+        #     raise ValidationError(f"cmpny_mastr with code {emp_company_code} does not exist.")
 
-        # # Assign company instance to the row
-        # row['emp_company_id'] = company_instance
-        # if errors:
-        #     raise ValidationError(errors)
 
+        if errors:
+            raise ValidationError(errors)
+        
 
 class EmpCustomFieldResource(resources.ModelResource):
+
     TEXT_LIMIT_MIN = 1000
     TEXT_LIMIT_MAX = 1000000
     DATE_FORMAT = '%d-%m-%Y'
+
+    emp_master = fields.Field(attribute='emp_master', column_name='Employee Code', widget=ForeignKeyWidget(emp_master, 'id'))
+    field_name = fields.Field(attribute='field_name', column_name='Field Name')
+    field_value = fields.Field(attribute='field_value', column_name='Field Value')
+
+    class Meta:
+        model = Emp_CustomField
+        fields = ('id', 'emp_master', 'field_name', 'field_value')
 
     def __init__(self):
         self.errors = []
 
     def before_import_row(self, row, row_idx=None, **kwargs):
-        field_value = row.get('field_value')
-        emp_master_id = row.get('emp_master')
+        field_value = row.get('Field Value')  # Make sure this matches the custom heading in the Excel sheet
+        emp_master_id = row.get('Employee Code')  # Make sure this matches the custom heading in the Excel sheet
 
         if field_value is None:
             row['field_value'] = ""
@@ -213,7 +226,7 @@ class EmpCustomFieldResource(resources.ModelResource):
         if isinstance(field_value, int) or field_value.isdigit():
             row['field_value'] = int(field_value)
         elif isinstance(field_value, str):
-            if re.match(r'\d{2}-\d{2}-\d{4}', field_value):
+            if re.match(r'\d{2}-\d{2}-\d{4}$', field_value):
                 parsed_date = datetime.strptime(field_value, self.DATE_FORMAT).date()
                 row['field_value'] = parsed_date
             elif field_value.lower() in ['yes', 'no', 'true', 'false', '0', '1']:
@@ -226,10 +239,10 @@ class EmpCustomFieldResource(resources.ModelResource):
                 row['field_value'] = field_value
         else:
             raise ValueError(f"Invalid value '{field_value}' in row {row_idx}. Expected int, str, or None.")
-        
+
         if not emp_master.objects.filter(id=emp_master_id).exists():
             raise ValidationError(f"emp_master matching query does not exist for ID: {emp_master_id}")
-        
+
     def after_import_row(self, row, row_result, **kwargs):
         if row_result.errors:
             self.errors.append({'row_idx': row_result.row_idx, 'errors': row_result.errors})
@@ -238,22 +251,31 @@ class EmpCustomFieldResource(resources.ModelResource):
 
     def before_import(self, dataset, using_transactions, dry_run, **kwargs):
         for row_idx, row in enumerate(dataset.dict, start=2):
-            field_value = row.get('field_value')
+            field_value = row.get('field_value')  # Make sure this matches the custom heading in the Excel sheet
             if field_value is not None and isinstance(field_value, str):
-                if not re.match(r'\d{2}-\d{2}-\d{4}', field_value):
+                if re.match(r'\d{2}-\d{2}-\d{4}$', field_value):
+                    print("Date Format Matched:", re.match(r'\d{2}-\d{2}-\d{4}$', field_value))
+                    parsed_date = datetime.strptime(field_value, self.DATE_FORMAT).date()
+                    row['field_value'] = parsed_date
+                else:
+                    print("Date Format Not Matched:", field_value)
                     self.errors.append({'row_idx': row_idx, 'errors': [f"Invalid date format '{field_value}'. Please use 'dd-mm-yyyy' format."]})
-    
-    class Meta:
-        model = Emp_CustomField
-        fields = ('id', 'emp_master', 'field_name', 'field_value') 
+                    print("Error Message:", f"Invalid date format '{field_value}'. Please use 'dd-mm-yyyy' format.")
+
+            else:
+                print("Field Value Not String:", field_value)
+
+        if self.errors:
+            print("Errors Occurred During Before Import:", self.errors)
+   
     
 class DocumentResource(resources.ModelResource):
-    # emp_id = fields.Field(attribute='emp_id', column_name='Employee ID')
-    # emp_sl_no = fields.Field(attribute='emp_sl_no', column_name='SerialNo')
-    # emp_doc_type = fields.Field(attribute='emp_doc_type', column_name='Document Type')
-    # emp_doc_number = fields.Field(attribute='emp_doc_number', column_name='Document Number')
-    # emp_doc_issued_date = fields.Field(attribute='emp_doc_issued_date', column_name='Document Issued Date')
-    # emp_doc_expiry_date = fields.Field(attribute='emp_doc_expiry_date', column_name='Document Expiry Date')
+    emp_id = fields.Field(attribute='emp_id', column_name='Employee ID',widget=ForeignKeyWidget(emp_master, 'id'))
+    emp_sl_no = fields.Field(attribute='emp_sl_no', column_name='SerialNo')
+    emp_doc_type = fields.Field(attribute='emp_doc_type', column_name='Document Type',widget=ForeignKeyWidget(Document_type, 'id'))
+    emp_doc_number = fields.Field(attribute='emp_doc_number', column_name='Document Number')
+    emp_doc_issued_date = fields.Field(attribute='emp_doc_issued_date', column_name='Document Issued Date')
+    emp_doc_expiry_date = fields.Field(attribute='emp_doc_expiry_date', column_name='Document Expiry Date')
 
     
     class Meta:
@@ -277,8 +299,8 @@ class DocumentResource(resources.ModelResource):
         errors = []
         
         
-        employee_id = row.get('emp_id')
-        doc_type_id = row.get('emp_doc_type')
+        employee_id = row.get('Employee ID')
+        doc_type_id = row.get('Document Type')
         
         # Validate emp_id and emp_doc_type
         if not emp_master.objects.filter(id=employee_id).exists():
@@ -289,7 +311,7 @@ class DocumentResource(resources.ModelResource):
             
         
         # Validate date fields format
-        date_fields = ['emp_doc_issued_date', 'emp_doc_expiry_date']
+        date_fields = ['Document Issued Date', 'Document Expiry Date']
         date_format = '%d-%m-%y'  # Format: dd-mm-yy
 
         for field in date_fields:

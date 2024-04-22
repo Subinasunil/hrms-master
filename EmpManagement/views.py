@@ -266,17 +266,17 @@ class CustomFieldViewset(viewsets.ModelViewSet):
         
         return super().handle_exception(exc)
 
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+    # def create(self, request, *args, **kwargs):
+    #     serializer = self.get_serializer(data=request.data)
+    #     serializer.is_valid(raise_exception=True)
         
-        data_type = serializer.validated_data.get('data_type')
-        if not data_type:
-            return Response({'error': 'Please select a data type.'}, status=status.HTTP_400_BAD_REQUEST)
+    #     data_type = serializer.validated_data.get('data_type')
+    #     if not data_type:
+    #         return Response({'error': 'Please select a data type.'}, status=status.HTTP_400_BAD_REQUEST)
         
-        self.perform_create(serializer)
-        headers = self.get_success_headers(serializer.data)
-        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+    #     self.perform_create(serializer)
+    #     headers = self.get_success_headers(serializer.data)
+    #     return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
 
 class EmpFam_CustomFieldViewset(viewsets.ModelViewSet):
