@@ -266,17 +266,7 @@ class CustomFieldViewset(viewsets.ModelViewSet):
         
         return super().handle_exception(exc)
 
-    # def create(self, request, *args, **kwargs):
-    #     serializer = self.get_serializer(data=request.data)
-    #     serializer.is_valid(raise_exception=True)
-        
-    #     data_type = serializer.validated_data.get('data_type')
-    #     if not data_type:
-    #         return Response({'error': 'Please select a data type.'}, status=status.HTTP_400_BAD_REQUEST)
-        
-    #     self.perform_create(serializer)
-    #     headers = self.get_success_headers(serializer.data)
-    #     return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+    
 
 
 class EmpFam_CustomFieldViewset(viewsets.ModelViewSet):
@@ -292,17 +282,6 @@ class EmpFam_CustomFieldViewset(viewsets.ModelViewSet):
         
         return super().handle_exception(exc)
 
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        
-        data_type = serializer.validated_data.get('data_type')
-        if not data_type:
-            return Response({'error': 'Please select a data type.'}, status=status.HTTP_400_BAD_REQUEST)
-        
-        self.perform_create(serializer)
-        headers = self.get_success_headers(serializer.data)
-        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
 class EmpJobHistory_UdfViewset(viewsets.ModelViewSet):
     queryset = EmpJobHistory_CustomField.objects.all()
@@ -316,18 +295,6 @@ class EmpJobHistory_UdfViewset(viewsets.ModelViewSet):
             return Response({'error': error_message}, status=status.HTTP_400_BAD_REQUEST)
         
         return super().handle_exception(exc)
-
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        
-        data_type = serializer.validated_data.get('data_type')
-        if not data_type:
-            return Response({'error': 'Please select a data type.'}, status=status.HTTP_400_BAD_REQUEST)
-        
-        self.perform_create(serializer)
-        headers = self.get_success_headers(serializer.data)
-        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
 
 class EmpQf_UdfViewset(viewsets.ModelViewSet):
@@ -343,17 +310,7 @@ class EmpQf_UdfViewset(viewsets.ModelViewSet):
         
         return super().handle_exception(exc)
 
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        
-        data_type = serializer.validated_data.get('data_type')
-        if not data_type:
-            return Response({'error': 'Please select a data type.'}, status=status.HTTP_400_BAD_REQUEST)
-        
-        self.perform_create(serializer)
-        headers = self.get_success_headers(serializer.data)
-        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
 
 class EmpDoc_UdfViewset(viewsets.ModelViewSet):
     queryset = EmpDocuments_CustomField.objects.all()
@@ -368,17 +325,6 @@ class EmpDoc_UdfViewset(viewsets.ModelViewSet):
         
         return super().handle_exception(exc)
 
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        
-        data_type = serializer.validated_data.get('data_type')
-        if not data_type:
-            return Response({'error': 'Please select a data type.'}, status=status.HTTP_400_BAD_REQUEST)
-        
-        self.perform_create(serializer)
-        headers = self.get_success_headers(serializer.data)
-        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
 
 #emp bulkupload
@@ -388,58 +334,6 @@ class EmpbulkuploadViewSet(viewsets.ModelViewSet):
     serializer_class = EmpBulkUploadSerializer
     permission_classes = [IsAuthenticated]
     parser_classes = (MultiPartParser, FormParser)
-
-    # @action(detail=False, methods=['post'], parser_classes=[MultiPartParser, FormParser])
-    # def bulk_upload(self, request):
-    #     if request.method == 'POST' and request.FILES.get('file'):
-    #         excel_file = request.FILES['file']
-    #         if excel_file.name.endswith('.xlsx'):
-    #             try:
-    #                 # Load data from the Excel file into a Dataset
-    #                 dataset = Dataset()
-    #                 dataset.load(excel_file.read(), format='xlsx')
-
-    #                 # Create resource instances for Employee and CustomField
-    #                 employee_resource = EmployeeResource()
-    #                 custom_field_resource = EmpCustomFieldResource()
-
-    #                 # Collect errors for Employee resource
-    #                 employee_errors = []
-    #                 with transaction.atomic():
-    #                     for row_idx, row in enumerate(dataset.dict, start=2):  # Start from row 2 (1-based index)
-    #                         try:
-    #                             employee_resource.before_import_row(row, row_idx=row_idx)
-    #                         except ValidationError as e:
-    #                             employee_errors.extend([f"Row {row_idx}: {error}" for error in e.messages])
-
-    #                 # Collect errors for CustomField resource
-    #                 custom_field_errors = []
-    #                 with transaction.atomic():
-    #                     for row_idx, row in enumerate(dataset.dict, start=2):  # Start from row 2 (1-based index)
-    #                         try:
-    #                             custom_field_resource.before_import_row(row, row_idx=row_idx)
-    #                         except ValidationError as e:
-    #                             custom_field_errors.extend([f"Row {row_idx}: {error}" for error in e.messages])
-
-    #                 # Merge errors from both resources
-    #                 all_errors = employee_errors + custom_field_errors
-
-    #                 # If there are any errors, return them
-    #                 if all_errors:
-    #                     return Response({"errors": all_errors}, status=400)
-
-    #                 # If no errors, import valid data into the models
-    #                 with transaction.atomic():
-    #                     employee_result = employee_resource.import_data(dataset, dry_run=False, raise_errors=True)
-    #                     custom_field_result = custom_field_resource.import_data(dataset, dry_run=False, raise_errors=True)
-
-    #                 return Response({"message": f"{employee_result.total_rows} records created successfully"})
-    #             except Exception as e:
-    #                 return Response({"error": str(e)}, status=400)
-    #         else:
-    #             return Response({"error": "Invalid file format. Only Excel files (.xlsx) are supported."}, status=400)
-    #     else:
-    #         return Response({"error": "Please provide an Excel file."}, status=400)
 
 
     @action(detail=False, methods=['post'], parser_classes=[MultiPartParser, FormParser])
@@ -522,7 +416,7 @@ class EmpbulkuploadViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'])  # New endpoint for downloading default file
     def download_default_excel_file(self, request):
         # demo_file_path = os.path.join(settings.BASE_DIR,'defaults', 'emp mstr.xlsx')
-        demo_file_path = os.path.join(os.path.dirname(__file__), 'defaults', 'emp mstr.xlsx')
+        demo_file_path = os.path.join(os.path.dirname(__file__), 'defaults', 'NewEmpMstr.xlsx')
         try:
             with open(demo_file_path, 'rb') as f:
                 response = HttpResponse(f.read(), content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
@@ -701,38 +595,6 @@ class Bulkupload_DocumentViewSet(viewsets.ModelViewSet):
         else:
             return Response({"error": "Please provide an Excel file."}, status=400)
 
-
-    # @action(detail=False, methods=['post'], parser_classes=[MultiPartParser, FormParser])
-    # def bulk_upload(self, request):
-    #     if request.method == 'POST' and request.FILES.get('file'):
-    #         excel_file = request.FILES['file']
-    #         if excel_file.name.endswith('.xlsx'):
-    #             try:
-    #                 # Load data from the Excel file into a Dataset
-    #                 dataset = Dataset()
-    #                 dataset.load(excel_file.read(), format='xlsx')
-
-    #                 # Create a resource instance
-    #                 resource = DocumentResource()
-
-    #                 # If no errors, proceed with importing data
-    #                 with transaction.atomic():
-    #                     resource.import_data(dataset, dry_run=False, raise_errors=True)
-
-    #                 # Get all row errors
-    #                 all_row_errors = resource.get_row_errors()
-
-    #                 if all_row_errors:
-    #                     return Response({"errors": all_row_errors}, status=400)
-    #                 else:
-    #                     return Response({"message": f"{dataset.height - 1} records created successfully"})
-    #             except Exception as e:
-    #                 return Response({"error": str(e)}, status=400)
-    #         else:
-    #             return Response({"error": "Invalid file format. Only Excel files (.xlsx) are supported."}, status=400)
-    #     else:
-    #         return Response({"error": "Please provide an Excel file."}, status=400)
- 
 
 
 

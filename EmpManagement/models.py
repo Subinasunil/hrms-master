@@ -12,6 +12,8 @@ from import_export.admin import ImportExportModelAdmin
 from django import forms
 import datetime,json
 from django.core.validators import validate_email
+from datetime import datetime
+import re
 
 class emp_master(models.Model):
 
@@ -46,7 +48,7 @@ class emp_master(models.Model):
     emp_relegion = models.CharField(max_length=50,null=True,blank =True)
     emp_profile_pic = models.ImageField(null=True,blank =True )
     emp_blood_group = models.CharField(max_length=50,blank=True)
-    emp_nationality = models.CharField(null=True,blank =True)
+    emp_nationality_id = models.ForeignKey("Core.Nationality",on_delete = models.CASCADE,null=True,blank =True)
     emp_marital_status = models.CharField(max_length=10,choices=MARITAL_STATUS,null=True,blank =True)
     emp_father_name = models.CharField(max_length=50,null=True,blank =True)
     emp_mother_name = models.CharField(max_length=50,null=True,blank =True)
@@ -100,109 +102,77 @@ class emp_master(models.Model):
         return self.emp_login_id or "Unnamed Employee"
 
 class Emp_CustomField(models.Model):
-    FIELD_TYPES = (
-        ('char', 'CharField'),
-        ('date', 'DateField'),
-        ('email', 'EmailField'),
-        ('integer', 'IntegerField'),
-        ('boolean', 'BooleanField'),
+    FIELD_TYPES = (   
         ('dropdown', 'DropdownField'),
-        ('text', 'TextField'),
         ('radio', 'RadioButtonField'),
-        ('select', 'SelectBoxField'),)
+       )
     emp_master = models.ForeignKey(emp_master, on_delete=models.CASCADE,related_name='custom_fields')
     field_name = models.CharField(max_length=100)  # Field name provided by end user
-    field_value = models.TextField()  # Field value provided by end user
+    field_value = models.TextField(null=True, blank=True)  # Field value provided by end user
     data_type = models.CharField(max_length=20, choices=FIELD_TYPES,null=True,blank =True)
     dropdown_values = models.JSONField(null=True, blank=True)
     radio_values = models.JSONField(null=True, blank=True)
-    selectbox_values = models.JSONField(null=True, blank=True)
+    
     
     def save(self, *args, **kwargs):
-        # if not self.data_type:
-        #     if self.field_value.isdigit():
-        #         self.data_type = 'integer'
-        #     elif self.field_value.lower() in ['true', 'false', '1', '0', 'yes', 'no']:
-        #         self.data_type = 'boolean'
-        #     else:
-        #         try:
-        #             # Attempt to parse as date
-        #             datetime.datetime.strptime(self.field_value, '%d-%m-%Y')
-        #             self.data_type = 'date'
-        #         except ValueError:
-        #             # If commas are present, assume it's a list of values
-        #             if ',' in self.field_value:
-        #                 self.data_type = 'dropdown'  # Or whichever data type suits your business logic
-        #             else:
-        #                 # Default to char field if no other inference can be made
-        #                 self.data_type = 'char'
+        if self.data_type == 'dropdown':
+            # Check if dropdown options are provided and valid JSON
+            if self.dropdown_values:
+                options = self.dropdown_values  # No need for json.loads() here
 
-        if self.data_type == 'char':
-            self.char_field = self.field_value
-        elif self.data_type == 'date':
-            try:
-                # Corrected date format
-                self.date_field = datetime.datetime.strptime(self.field_value, '%d-%m-%Y').date()
-            except ValueError:
-                raise ValidationError({'field_value': ['Invalid date format. Date should be in DD-MM-YYYY format.']})
-        elif self.data_type == 'email':
-            self.email_field = self.field_value
-            try:
-                # Validate email format
-                validate_email(self.field_value)
-            except ValidationError as e:
-                # Raise ValidationError with custom error message
-                raise ValidationError({'field_value': ['Invalid email format.']})
-            self.email_field = self.field_value
-        elif self.data_type == 'integer':
-            try:
-                # Validate if field_value can be converted to integer
-                int(self.field_value)
-            except ValueError:
-                raise ValidationError({'field_value': ['Invalid integer value.']})
-            self.integer_field = int(self.field_value)
+                # Assign dropdown options to the field_value if it's empty
+                if not self.field_value:
+                    self.field_value = json.dumps(options)
+                else:
+                    # If field_value is not empty, check if it's in the dropdown options
+                    if self.field_value not in options.values():
+                        raise ValueError("Selected value is not in the dropdown options.")
 
-        elif self.data_type == 'boolean':
-            if self.field_value.lower() in ['true', '1', 'yes']:
-                self.boolean_field = True
-            elif self.field_value.lower() in ['false', '0', 'no']:
-                self.boolean_field = False
-            else:
-                raise ValidationError({'field_value': ['Invalid boolean value. Accepted values are: true, false, 1, 0, yes, no.']})
-
-        elif self.data_type == 'dropdown':
-            try:
-                # Split the field_value by comma and store as dropdown values
-                dropdown_values_list = [value.strip() for value in self.field_value.split(',')]
-                self.dropdown_values = dropdown_values_list
-            except Exception as e:
-                raise ValidationError({'field_value': ['Invalid dropdown values format.']})
-        
         elif self.data_type == 'radio':
-            try:
-                # Split the field_value by comma and store as radio button values
-                radio_values_list = [value.strip() for value in self.field_value.split(',')]
-                self.radio_values = radio_values_list
-            except Exception as e:
-                # Handle exceptions here
-                pass
+            # If radio options are not provided, use an empty list
+            if self.radio_values:
+                options = self.radio_values  # No need for json.loads() here
 
-        elif self.data_type == 'select':
-            try:
-                # Split the field_value by comma and store as select box values
-                selectbox_values_list = [value.strip() for value in self.field_value.split(',')]
-                self.selectbox_values = selectbox_values_list
-            except Exception as e:
-                # Handle exceptions here
-                pass
-
+                # Assign radio options to the field_value if it's empty
+                if not self.field_value:
+                    self.field_value = json.dumps(options)
+                else:
+                    # If field_value is not empty, check if it's in the radio options
+                    if self.field_value not in options.values():
+                        raise ValueError("Selected value is not in the radio options.")
+        else:
+            if isinstance(self.field_value, int) or self.field_value.isdigit():
+                self.data_type = 'integer'
+            elif isinstance(self.field_value, str):
+                if re.match(r'\d{1,2}-\d{1,2}-\d{4}', self.field_value):
+                    parts = self.field_value.split('-')
+                    # Add leading zeros if necessary
+                    day = parts[0].zfill(2)
+                    month = parts[1].zfill(2)
+                    formatted_date = f"{day}-{month}-{parts[2]}"
+                    try:
+                        parsed_date = datetime.strptime(formatted_date, '%d-%m-%Y').date()
+                    except ValueError:
+                        raise ValidationError({'field_value': ['Invalid date format. Date should be in DD-MM-YYYY format.']})
+                    self.data_type = 'date'
+                    self.date_field = parsed_date
+                elif self.field_value.lower() in ['yes', 'no', 'true', 'false', '0', '1']:
+                    self.data_type = 'boolean'
+                elif re.match(r"[^@]+@[^@]+\.[^@]+", self.field_value):
+                    self.data_type = 'email'
+                elif self.data_type == 'dropdown':
+                    # Parse dropdown options if provided
+                    if self.field_value:
+                        self.field_value = self.field_value.split(',')
+                elif self.data_type == 'radio':
+                    # Parse radio options if provided
+                    if self.field_value:
+                        self.field_value = self.field_value.split(',')
+                else:
+                    self.data_type = 'text'
+            else:
+                raise ValueError(f"Invalid value '{self.field_value}' for data type '{self.data_type}'.")
         
-        # elif self.data_type == 'text':
-        #     # Perform validation for text type if needed
-        #     #  check if the length of the text is within acceptable limits
-        #     if len(self.field_value) > 2000:
-        #         raise ValidationError({'field_value': ['Text exceeds maximum length.']})
-
         super().save(*args, **kwargs)
     
     
@@ -211,8 +181,8 @@ class Emp_CustomField(models.Model):
 #EMPLOYEE FAMILY(ef) data
 class emp_family(models.Model):
     emp_id =models.ForeignKey('emp_master',on_delete = models.CASCADE,null=True,blank=True, related_name='emp_family')
+    ef_sl_no = models.CharField(max_length=50, unique=True,null=False,blank =True,default=None)
     ef_member_name = models.CharField(max_length=50)
-    ef_member_no = models.CharField(max_length=50, unique=True,null=False,blank =True,default=None)
     emp_relation = models.CharField(max_length=50)
     ef_company_expence = models.FloatField()
     ef_date_of_birth = models.DateField()
@@ -223,139 +193,87 @@ class emp_family(models.Model):
     is_active = models.BooleanField(default=True)
 
     def __str__(self):
-        return f"{self.ef_member_no } - {self.emp_login_id}"
+        return f"{self.ef_sl_no }"
+        # - {self.emp_login_id}"
 
 class EmpFamily_CustomField(models.Model):
     FIELD_TYPES = (
-        ('char', 'CharField'),
-        ('date', 'DateField'),
-        ('email', 'EmailField'),
-        ('integer', 'IntegerField'),
-        ('boolean', 'BooleanField'),
         ('dropdown', 'DropdownField'),
-        ('text', 'TextField'),
-        ('radio', 'RadioButtonField'),
-        ('select', 'SelectBoxField'),)
+        ('radio', 'RadioButtonField'),)
     emp_family = models.ForeignKey('emp_family', on_delete=models.CASCADE, related_name='fam_custom_fields')
     field_name = models.CharField(max_length=100)  # Field name provided by end user
-    field_value = models.CharField(max_length=255)  # Field value provided by end user
+    field_value = models.TextField(null=True, blank=True)  # Field value provided by end user
     data_type = models.CharField(max_length=20, choices=FIELD_TYPES,null=True,blank =True)
     dropdown_values = models.JSONField(null=True, blank=True)
     radio_values = models.JSONField(null=True, blank=True)
-    selectbox_values = models.JSONField(null=True, blank=True)
+    
     
 
-    # def save(self, *args, **kwargs):
-    #     # Infer data type if not provided
-    #     if not self.data_type:
-    #         if self.field_value.isdigit():
-    #             self.data_type = 'integer'
-    #         elif self.field_value.lower() in ['true', 'false', '1', '0', 'yes', 'no']:
-    #             self.data_type = 'boolean'
-    #         else:
-    #             try:
-    #                 # Attempt to parse as date
-    #                 datetime.datetime.strptime(self.field_value, '%d-%m-%Y')
-    #                 self.data_type = 'date'
-    #             except ValueError:
-    #                 # If commas are present, assume it's a list of values
-    #                 if ',' in self.field_value:
-    #                     self.data_type = 'dropdown'  # Or whichever data type suits your business logic
-    #                 else:
-    #                     # Default to char field if no other inference can be made
-    #                     self.data_type = 'char'
+    def save(self, *args, **kwargs):
+        if self.data_type == 'dropdown':
+            # Check if dropdown options are provided and valid JSON
+            if self.dropdown_values:
+                options = self.dropdown_values  # No need for json.loads() here
 
-    def clean(self):
-        if self.data_type:
-            if self.data_type == 'integer':
-                try:
-                    int(self.field_value)
-                except ValueError:
-                    raise ValidationError({'field_value': 'Please enter a valid integer.'})
-            elif self.data_type == 'boolean':
-                if self.field_value.lower() not in ['true', 'false']:
-                    raise ValidationError({'field_value': 'Please enter either true or false.'})
-            elif self.data_type == 'date':
-                try:
-                    datetime.datetime.strptime(self.field_value, '%d-%m-%Y')
-                except ValueError:
-                    raise ValidationError({'field_value': 'Please enter the date in the format dd-mm-yyyy.'})
+                # Assign dropdown options to the field_value if it's empty
+                if not self.field_value:
+                    self.field_value = json.dumps(options)
+                else:
+                    # If field_value is not empty, check if it's in the dropdown options
+                    if self.field_value not in options.values():
+                        raise ValueError("Selected value is not in the dropdown options.")
 
+        elif self.data_type == 'radio':
+            # If radio options are not provided, use an empty list
+            if self.radio_values:
+                options = self.radio_values  # No need for json.loads() here
 
-    #     if self.data_type == 'char':
-    #         self.char_field = self.field_value
-    #     elif self.data_type == 'date':
-    #         try:
-    #             # Corrected date format
-    #             self.date_field = datetime.datetime.strptime(self.field_value, '%d-%m-%Y').date()
-    #         except ValueError:
-    #             raise ValidationError({'field_value': ['Invalid date format. Date should be in DD-MM-YYYY format.']})
-    #     elif self.data_type == 'email':
-    #         self.email_field = self.field_value
-    #         try:
-    #             # Validate email format
-    #             validate_email(self.field_value)
-    #         except ValidationError as e:
-    #             # Raise ValidationError with custom error message
-    #             raise ValidationError({'field_value': ['Invalid email format.']})
-    #         self.email_field = self.field_value
-    #     elif self.data_type == 'integer':
-    #         try:
-    #             # Validate if field_value can be converted to integer
-    #             int(self.field_value)
-    #         except ValueError:
-    #             raise ValidationError({'field_value': ['Invalid integer value.']})
-    #         self.integer_field = int(self.field_value)
-
-    #     elif self.data_type == 'boolean':
-    #         if self.field_value.lower() in ['true', '1', 'yes']:
-    #             self.boolean_field = True
-    #         elif self.field_value.lower() in ['false', '0', 'no']:
-    #             self.boolean_field = False
-    #         else:
-    #             raise ValidationError({'field_value': ['Invalid boolean value. Accepted values are: true, false, 1, 0, yes, no.']})
-
-    #     elif self.data_type == 'dropdown':
-    #         try:
-    #             # Split the field_value by comma and store as dropdown values
-    #             dropdown_values_list = [value.strip() for value in self.field_value.split(',')]
-    #             self.dropdown_values = dropdown_values_list
-    #         except Exception as e:
-    #             # Handle exceptions here
-    #             pass
+                # Assign radio options to the field_value if it's empty
+                if not self.field_value:
+                    self.field_value = json.dumps(options)
+                else:
+                    # If field_value is not empty, check if it's in the radio options
+                    if self.field_value not in options.values():
+                        raise ValueError("Selected value is not in the radio options.")
+        else:
+            if isinstance(self.field_value, int) or self.field_value.isdigit():
+                self.data_type = 'integer'
+            elif isinstance(self.field_value, str):
+                if re.match(r'\d{1,2}-\d{1,2}-\d{4}', self.field_value):
+                    parts = self.field_value.split('-')
+                    # Add leading zeros if necessary
+                    day = parts[0].zfill(2)
+                    month = parts[1].zfill(2)
+                    formatted_date = f"{day}-{month}-{parts[2]}"
+                    try:
+                        parsed_date = datetime.strptime(formatted_date, '%d-%m-%Y').date()
+                    except ValueError:
+                        raise ValidationError({'field_value': ['Invalid date format. Date should be in DD-MM-YYYY format.']})
+                    self.data_type = 'date'
+                    self.date_field = parsed_date
+                elif self.field_value.lower() in ['yes', 'no', 'true', 'false', '0', '1']:
+                    self.data_type = 'boolean'
+                elif re.match(r"[^@]+@[^@]+\.[^@]+", self.field_value):
+                    self.data_type = 'email'
+                elif self.data_type == 'dropdown':
+                    # Parse dropdown options if provided
+                    if self.field_value:
+                        self.field_value = self.field_value.split(',')
+                elif self.data_type == 'radio':
+                    # Parse radio options if provided
+                    if self.field_value:
+                        self.field_value = self.field_value.split(',')
+                else:
+                    self.data_type = 'text'
+            else:
+                raise ValueError(f"Invalid value '{self.field_value}' for data type '{self.data_type}'.")
         
-    #     elif self.data_type == 'radio':
-    #         try:
-    #             # Split the field_value by comma and store as radio button values
-    #             radio_values_list = [value.strip() for value in self.field_value.split(',')]
-    #             self.radio_values = radio_values_list
-    #         except Exception as e:
-    #             # Handle exceptions here
-    #             pass
-
-    #     elif self.data_type == 'select':
-    #         try:
-    #             # Split the field_value by comma and store as select box values
-    #             selectbox_values_list = [value.strip() for value in self.field_value.split(',')]
-    #             self.selectbox_values = selectbox_values_list
-    #         except Exception as e:
-    #             # Handle exceptions here
-    #             pass
-
-        
-    #     elif self.data_type == 'text':
-    #         # Perform validation for text type if needed
-    #         #  check if the length of the text is within acceptable limits
-    #         if len(self.field_value) > 2000:
-    #             raise ValidationError({'field_value': ['Text exceeds maximum length.']})
-
-
-    #     super().save(*args, **kwargs)
+        super().save(*args, **kwargs)
 
 #EMPLOPYEE JOB HISTORY
 class EmpJobHistory(models.Model):
     emp_id =models.ForeignKey('emp_master',on_delete = models.CASCADE,related_name='emp_job_history')
-    emp_jh_no = models.CharField(max_length=50, unique=True,null=False,blank =True,default=None)
+    emp_sl_no = models.CharField(max_length=50, unique=True,null=False,blank =True,default=None)
     emp_jh_from_date = models.DateField()
     emp_jh_end_date = models.DateField()
     emp_jh_company_name=models.CharField(max_length=50)
@@ -369,95 +287,79 @@ class EmpJobHistory(models.Model):
     updated_by = models.ForeignKey('UserManagement.CustomUser', on_delete=models.SET_NULL, null=True, related_name='%(class)s_updated_by')
 
     def __str__(self):
-        return f"{self.emp_jh_no }"
+        return f"{self.emp_sl_no }"
 
 class EmpJobHistory_CustomField(models.Model):
     FIELD_TYPES = (
-        ('char', 'CharField'),
-        ('date', 'DateField'),
-        ('email', 'EmailField'),
-        ('integer', 'IntegerField'),
-        ('boolean', 'BooleanField'),
         ('dropdown', 'DropdownField'),
-        ('text', 'TextField'),
-        ('radio', 'RadioButtonField'),
-        ('select', 'SelectBoxField'),)
+        ('radio', 'RadioButtonField'),)
     emp_job_history = models.ForeignKey(EmpJobHistory, on_delete=models.CASCADE,related_name='jobhistory_customfields')
     field_name = models.CharField(max_length=100)  # Field name provided by end user
-    field_value = models.CharField(max_length=255)  # Field value provided by end user
+    field_value = models.TextField(null=True, blank=True)  # Field value provided by end user
     data_type = models.CharField(max_length=20, choices=FIELD_TYPES,null=True,blank =True)
     dropdown_values = models.JSONField(null=True, blank=True)
     radio_values = models.JSONField(null=True, blank=True)
-    selectbox_values = models.JSONField(null=True, blank=True)
+    
     
     def save(self, *args, **kwargs):
-        if self.data_type == 'char':
-            self.char_field = self.field_value
-        elif self.data_type == 'date':
-            try:
-                # Corrected date format
-                self.date_field = datetime.datetime.strptime(self.field_value, '%d-%m-%Y').date()
-            except ValueError:
-                raise ValidationError({'field_value': ['Invalid date format. Date should be in DD-MM-YYYY format.']})
-        elif self.data_type == 'email':
-            self.email_field = self.field_value
-            try:
-                # Validate email format
-                validate_email(self.field_value)
-            except ValidationError as e:
-                # Raise ValidationError with custom error message
-                raise ValidationError({'field_value': ['Invalid email format.']})
-            self.email_field = self.field_value
-        elif self.data_type == 'integer':
-            try:
-                # Validate if field_value can be converted to integer
-                int(self.field_value)
-            except ValueError:
-                raise ValidationError({'field_value': ['Invalid integer value.']})
-            self.integer_field = int(self.field_value)
+        if self.data_type == 'dropdown':
+            # Check if dropdown options are provided and valid JSON
+            if self.dropdown_values:
+                options = self.dropdown_values  # No need for json.loads() here
 
-        elif self.data_type == 'boolean':
-            if self.field_value.lower() in ['true', '1', 'yes']:
-                self.boolean_field = True
-            elif self.field_value.lower() in ['false', '0', 'no']:
-                self.boolean_field = False
-            else:
-                raise ValidationError({'field_value': ['Invalid boolean value. Accepted values are: true, false, 1, 0, yes, no.']})
+                # Assign dropdown options to the field_value if it's empty
+                if not self.field_value:
+                    self.field_value = json.dumps(options)
+                else:
+                    # If field_value is not empty, check if it's in the dropdown options
+                    if self.field_value not in options.values():
+                        raise ValueError("Selected value is not in the dropdown options.")
 
-        elif self.data_type == 'dropdown':
-            try:
-                # Split the field_value by comma and store as dropdown values
-                dropdown_values_list = [value.strip() for value in self.field_value.split(',')]
-                self.dropdown_values = dropdown_values_list
-            except Exception as e:
-                # Handle exceptions here
-                pass
-        
         elif self.data_type == 'radio':
-            try:
-                # Split the field_value by comma and store as radio button values
-                radio_values_list = [value.strip() for value in self.field_value.split(',')]
-                self.radio_values = radio_values_list
-            except Exception as e:
-                # Handle exceptions here
-                pass
+            # If radio options are not provided, use an empty list
+            if self.radio_values:
+                options = self.radio_values  # No need for json.loads() here
 
-        elif self.data_type == 'select':
-            try:
-                # Split the field_value by comma and store as select box values
-                selectbox_values_list = [value.strip() for value in self.field_value.split(',')]
-                self.selectbox_values = selectbox_values_list
-            except Exception as e:
-                # Handle exceptions here
-                pass
-
+                # Assign radio options to the field_value if it's empty
+                if not self.field_value:
+                    self.field_value = json.dumps(options)
+                else:
+                    # If field_value is not empty, check if it's in the radio options
+                    if self.field_value not in options.values():
+                        raise ValueError("Selected value is not in the radio options.")
+        else:
+            if isinstance(self.field_value, int) or self.field_value.isdigit():
+                self.data_type = 'integer'
+            elif isinstance(self.field_value, str):
+                if re.match(r'\d{1,2}-\d{1,2}-\d{4}', self.field_value):
+                    parts = self.field_value.split('-')
+                    # Add leading zeros if necessary
+                    day = parts[0].zfill(2)
+                    month = parts[1].zfill(2)
+                    formatted_date = f"{day}-{month}-{parts[2]}"
+                    try:
+                        parsed_date = datetime.strptime(formatted_date, '%d-%m-%Y').date()
+                    except ValueError:
+                        raise ValidationError({'field_value': ['Invalid date format. Date should be in DD-MM-YYYY format.']})
+                    self.data_type = 'date'
+                    self.date_field = parsed_date
+                elif self.field_value.lower() in ['yes', 'no', 'true', 'false', '0', '1']:
+                    self.data_type = 'boolean'
+                elif re.match(r"[^@]+@[^@]+\.[^@]+", self.field_value):
+                    self.data_type = 'email'
+                elif self.data_type == 'dropdown':
+                    # Parse dropdown options if provided
+                    if self.field_value:
+                        self.field_value = self.field_value.split(',')
+                elif self.data_type == 'radio':
+                    # Parse radio options if provided
+                    if self.field_value:
+                        self.field_value = self.field_value.split(',')
+                else:
+                    self.data_type = 'text'
+            else:
+                raise ValueError(f"Invalid value '{self.field_value}' for data type '{self.data_type}'.")
         
-        elif self.data_type == 'text':
-            # Perform validation for text type if needed
-            #  check if the length of the text is within acceptable limits
-            if len(self.field_value) > 2000:
-                raise ValidationError({'field_value': ['Text exceeds maximum length.']})
-
         super().save(*args, **kwargs)
 
 
@@ -481,95 +383,76 @@ class EmpQualification(models.Model):
 
 class EmpQualification_CustomField(models.Model):
     FIELD_TYPES = (
-        ('char', 'CharField'),
-        ('date', 'DateField'),
-        ('email', 'EmailField'),
-        ('integer', 'IntegerField'),
-        ('boolean', 'BooleanField'),
         ('dropdown', 'DropdownField'),
-        ('text', 'TextField'),
         ('radio', 'RadioButtonField'),
-        ('select', 'SelectBoxField'),
         )
     emp_qualification = models.ForeignKey(EmpQualification, on_delete=models.CASCADE,related_name='custom_fields')
     field_name = models.CharField(max_length=100)  # Field name provided by end user
-    field_value = models.CharField(max_length=255)  # Field value provided by end user
+    field_value = models.TextField(null=True, blank=True)  # Field value provided by end user
     data_type = models.CharField(max_length=20, choices=FIELD_TYPES,null=True,blank =True)
     dropdown_values = models.JSONField(null=True, blank=True)
     radio_values = models.JSONField(null=True, blank=True)
-    selectbox_values = models.JSONField(null=True, blank=True)
+    
     
     def save(self, *args, **kwargs):
-        if self.data_type == 'char':
-            self.char_field = self.field_value
-        elif self.data_type == 'date':
-            try:
-                # Corrected date format
-                self.date_field = datetime.datetime.strptime(self.field_value, '%d-%m-%Y').date()
-            except ValueError:
-                raise ValidationError({'field_value': ['Invalid date format. Date should be in DD-MM-YYYY format.']})
-        elif self.data_type == 'email':
-            self.email_field = self.field_value
-            try:
-                # Validate email format
-                validate_email(self.field_value)
-            except ValidationError as e:
-                # Raise ValidationError with custom error message
-                raise ValidationError({'field_value': ['Invalid email format.']})
-            self.email_field = self.field_value
-        elif self.data_type == 'integer':
-            try:
-                # Validate if field_value can be converted to integer
-                int(self.field_value)
-            except ValueError:
-                raise ValidationError({'field_value': ['Invalid integer value.']})
-            self.integer_field = int(self.field_value)
+        if self.data_type == 'dropdown':
+            # Check if dropdown options are provided and valid JSON
+            if self.dropdown_values:
+                options = self.dropdown_values  # No need for json.loads() here
 
-        elif self.data_type == 'boolean':
-            if self.field_value.lower() in ['true', '1', 'yes']:
-                self.boolean_field = True
-            elif self.field_value.lower() in ['false', '0', 'no']:
-                self.boolean_field = False
-            else:
-                raise ValidationError({'field_value': ['Invalid boolean value. Accepted values are: true, false, 1, 0, yes, no.']})
+                # Assign dropdown options to the field_value if it's empty
+                if not self.field_value:
+                    self.field_value = json.dumps(options)
+                else:
+                    # If field_value is not empty, check if it's in the dropdown options
+                    if self.field_value not in options.values():
+                        raise ValueError("Selected value is not in the dropdown options.")
 
-        elif self.data_type == 'dropdown':
-            try:
-                # Split the field_value by comma and store as dropdown values
-                dropdown_values_list = [value.strip() for value in self.field_value.split(',')]
-                self.dropdown_values = dropdown_values_list
-            except Exception as e:
-                # Handle exceptions here
-                pass
-        
         elif self.data_type == 'radio':
-            try:
-                radio_values_list = [value.strip() for value in self.field_value.split(',')]
-                self.radio_values = radio_values_list
-                self.field_value = random.choice(radio_values_list)  # randomly select a value
-            except Exception as e:
-                raise ValidationError({'field_value': ['Invalid radio button values format.']})
+            # If radio options are not provided, use an empty list
+            if self.radio_values:
+                options = self.radio_values  # No need for json.loads() here
 
-
-        elif self.data_type == 'select':
-            try:
-                selectbox_values_list = [value.strip() for value in self.field_value.split(',')]
-                self.selectbox_values = selectbox_values_list
-                # randomly select multiple values, assuming you want to select up to 3 values
-                selected_values = random.sample(selectbox_values_list, min(len(selectbox_values_list), 3))
-                self.field_value = ','.join(selected_values)  # save selected values as comma-separated string
-            except Exception as e:
-                raise ValidationError({'field_value': ['Invalid select box values format.']})
-
-
+                # Assign radio options to the field_value if it's empty
+                if not self.field_value:
+                    self.field_value = json.dumps(options)
+                else:
+                    # If field_value is not empty, check if it's in the radio options
+                    if self.field_value not in options.values():
+                        raise ValueError("Selected value is not in the radio options.")
+        else:
+            if isinstance(self.field_value, int) or self.field_value.isdigit():
+                self.data_type = 'integer'
+            elif isinstance(self.field_value, str):
+                if re.match(r'\d{1,2}-\d{1,2}-\d{4}', self.field_value):
+                    parts = self.field_value.split('-')
+                    # Add leading zeros if necessary
+                    day = parts[0].zfill(2)
+                    month = parts[1].zfill(2)
+                    formatted_date = f"{day}-{month}-{parts[2]}"
+                    try:
+                        parsed_date = datetime.strptime(formatted_date, '%d-%m-%Y').date()
+                    except ValueError:
+                        raise ValidationError({'field_value': ['Invalid date format. Date should be in DD-MM-YYYY format.']})
+                    self.data_type = 'date'
+                    self.date_field = parsed_date
+                elif self.field_value.lower() in ['yes', 'no', 'true', 'false', '0', '1']:
+                    self.data_type = 'boolean'
+                elif re.match(r"[^@]+@[^@]+\.[^@]+", self.field_value):
+                    self.data_type = 'email'
+                elif self.data_type == 'dropdown':
+                    # Parse dropdown options if provided
+                    if self.field_value:
+                        self.field_value = self.field_value.split(',')
+                elif self.data_type == 'radio':
+                    # Parse radio options if provided
+                    if self.field_value:
+                        self.field_value = self.field_value.split(',')
+                else:
+                    self.data_type = 'text'
+            else:
+                raise ValueError(f"Invalid value '{self.field_value}' for data type '{self.data_type}'.")
         
-        elif self.data_type == 'text':
-            # Perform validation for text type if needed
-            #  check if the length of the text is within acceptable limits
-            if len(self.field_value) > 2000:
-                raise ValidationError({'field_value': ['Text exceeds maximum length.']})
-
-
         super().save(*args, **kwargs)
 
 
@@ -594,91 +477,76 @@ class Emp_Documents(models.Model):
 
 class EmpDocuments_CustomField(models.Model):
     FIELD_TYPES = (
-        ('char', 'CharField'),
-        ('date', 'DateField'),
-        ('email', 'EmailField'),
-        ('integer', 'IntegerField'),
-        ('boolean', 'BooleanField'),
         ('dropdown', 'DropdownField'),
-        ('text', 'TextField'),
         ('radio', 'RadioButtonField'),
-        ('select', 'SelectBoxField'),)
+        )
     emp_documents = models.ForeignKey(Emp_Documents, on_delete=models.CASCADE,related_name='custom_fields')
     field_name = models.CharField(max_length=100)  # Field name provided by end user
-    field_value = models.CharField(max_length=255)  # Field value provided by end user
+    field_value = models.TextField(null=True, blank=True)  # Field value provided by end user
     data_type = models.CharField(max_length=20, choices=FIELD_TYPES,null=True,blank =True)
     dropdown_values = models.JSONField(null=True, blank=True)
     radio_values = models.JSONField(null=True, blank=True)
-    selectbox_values = models.JSONField(null=True, blank=True)
+    
     
     def save(self, *args, **kwargs):
-        if self.data_type == 'char':
-            self.char_field = self.field_value
-        elif self.data_type == 'date':
-            try:
-                # Corrected date format
-                self.date_field = datetime.datetime.strptime(self.field_value, '%d-%m-%Y').date()
-            except ValueError:
-                raise ValidationError({'field_value': ['Invalid date format. Date should be in DD-MM-YYYY format.']})
-        elif self.data_type == 'email':
-            self.email_field = self.field_value
-            try:
-                # Validate email format
-                validate_email(self.field_value)
-            except ValidationError as e:
-                # Raise ValidationError with custom error message
-                raise ValidationError({'field_value': ['Invalid email format.']})
-            self.email_field = self.field_value
-        elif self.data_type == 'integer':
-            try:
-                # Validate if field_value can be converted to integer
-                int(self.field_value)
-            except ValueError:
-                raise ValidationError({'field_value': ['Invalid integer value.']})
-            self.integer_field = int(self.field_value)
+        if self.data_type == 'dropdown':
+            # Check if dropdown options are provided and valid JSON
+            if self.dropdown_values:
+                options = self.dropdown_values  # No need for json.loads() here
 
-        elif self.data_type == 'boolean':
-            if self.field_value.lower() in ['true', '1', 'yes']:
-                self.boolean_field = True
-            elif self.field_value.lower() in ['false', '0', 'no']:
-                self.boolean_field = False
-            else:
-                raise ValidationError({'field_value': ['Invalid boolean value. Accepted values are: true, false, 1, 0, yes, no.']})
-        elif self.data_type == 'dropdown':
-            try:
-                # Split the field_value by comma and store as dropdown values
-                dropdown_values_list = [value.strip() for value in self.field_value.split(',')]
-                self.dropdown_values = dropdown_values_list
-            except Exception as e:
-                # Handle exceptions here
-                pass
-        
+                # Assign dropdown options to the field_value if it's empty
+                if not self.field_value:
+                    self.field_value = json.dumps(options)
+                else:
+                    # If field_value is not empty, check if it's in the dropdown options
+                    if self.field_value not in options.values():
+                        raise ValueError("Selected value is not in the dropdown options.")
+
         elif self.data_type == 'radio':
-            try:
-                # Split the field_value by comma and store as radio button values
-                radio_values_list = [value.strip() for value in self.field_value.split(',')]
-                self.radio_values = radio_values_list
-            except Exception as e:
-                # Handle exceptions here
-                pass
+            # If radio options are not provided, use an empty list
+            if self.radio_values:
+                options = self.radio_values  # No need for json.loads() here
 
-        elif self.data_type == 'select':
-            try:
-                # Split the field_value by comma and store as select box values
-                selectbox_values_list = [value.strip() for value in self.field_value.split(',')]
-                self.selectbox_values = selectbox_values_list
-            except Exception as e:
-                # Handle exceptions here
-                pass
-
+                # Assign radio options to the field_value if it's empty
+                if not self.field_value:
+                    self.field_value = json.dumps(options)
+                else:
+                    # If field_value is not empty, check if it's in the radio options
+                    if self.field_value not in options.values():
+                        raise ValueError("Selected value is not in the radio options.")
+        else:
+            if isinstance(self.field_value, int) or self.field_value.isdigit():
+                self.data_type = 'integer'
+            elif isinstance(self.field_value, str):
+                if re.match(r'\d{1,2}-\d{1,2}-\d{4}', self.field_value):
+                    parts = self.field_value.split('-')
+                    # Add leading zeros if necessary
+                    day = parts[0].zfill(2)
+                    month = parts[1].zfill(2)
+                    formatted_date = f"{day}-{month}-{parts[2]}"
+                    try:
+                        parsed_date = datetime.strptime(formatted_date, '%d-%m-%Y').date()
+                    except ValueError:
+                        raise ValidationError({'field_value': ['Invalid date format. Date should be in DD-MM-YYYY format.']})
+                    self.data_type = 'date'
+                    self.date_field = parsed_date
+                elif self.field_value.lower() in ['yes', 'no', 'true', 'false', '0', '1']:
+                    self.data_type = 'boolean'
+                elif re.match(r"[^@]+@[^@]+\.[^@]+", self.field_value):
+                    self.data_type = 'email'
+                elif self.data_type == 'dropdown':
+                    # Parse dropdown options if provided
+                    if self.field_value:
+                        self.field_value = self.field_value.split(',')
+                elif self.data_type == 'radio':
+                    # Parse radio options if provided
+                    if self.field_value:
+                        self.field_value = self.field_value.split(',')
+                else:
+                    self.data_type = 'text'
+            else:
+                raise ValueError(f"Invalid value '{self.field_value}' for data type '{self.data_type}'.")
         
-        elif self.data_type == 'text':
-            # Perform validation for text type if needed
-            #  check if the length of the text is within acceptable limits
-            if len(self.field_value) > 2000:
-                raise ValidationError({'field_value': ['Text exceeds maximum length.']})
-
-
         super().save(*args, **kwargs)
 
 

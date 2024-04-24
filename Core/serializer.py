@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import(state_mstr,cntry_mstr,crncy_mstr,Document_type)
+from .models import(state_mstr,cntry_mstr,crncy_mstr,Document_type,Nationality)
 #STATE SERIALIZER
 class StateSerializer(serializers.ModelSerializer):
     class Meta:
@@ -41,3 +41,9 @@ class CurrencySerializer(serializers.ModelSerializer):
         model = crncy_mstr
         fields = '__all__'
 
+#ntionality bulk upload
+class NationalityBlkUpldSerializer(serializers.ModelSerializer):  
+    file = serializers.FileField(write_only=True) 
+    class Meta:
+        model = Nationality
+        fields = '__all__'

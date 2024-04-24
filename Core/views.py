@@ -1,7 +1,8 @@
 from django.shortcuts import render
 from django.contrib import messages
-from .models import (state_mstr,crncy_mstr,cntry_mstr,Document_type)
-from .serializer import (CountrySerializer,StateSerializer,CurrencySerializer,CntryBulkUploadSerializer,DocumentTypeSerializer)
+from .models import (state_mstr,crncy_mstr,cntry_mstr,Document_type,Nationality)
+from .serializer import (CountrySerializer,StateSerializer,CurrencySerializer,CntryBulkUploadSerializer,DocumentTypeSerializer,
+                         NationalityBlkUpldSerializer)
 from rest_framework.decorators import action
 from rest_framework import viewsets
 from rest_framework.response import Response
@@ -122,3 +123,29 @@ class DocumentTypeViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAdminUser,]
 
 
+#nationality bulkupload
+class NationalityBlkupldViewSet(viewsets.ModelViewSet):
+    queryset = Nationality.objects.all()
+    serializer_class = NationalityBlkUpldSerializer
+    permission_classes = [IsAuthenticated]
+    parser_classes = (MultiPartParser, FormParser)
+
+    @action(detail=False, methods=['post'], parser_classes=[MultiPartParser, FormParser])
+    def bulk_upload(self, request):
+        if request.method == 'POST' and request.FILES.get('file'):
+            csv_file = request.FILES['file']
+            decoded_file = csv_file.read().decode('utf-8').splitlines()
+            reader = csv.DictReader(decoded_file)
+
+            try:
+                for row in reader:
+                    Nationality.objects.create(
+                        N_name=row['N_name'],
+                        
+                    )
+            except Exception as e:
+                return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+            return Response({'message': 'Bulk upload successful'}, status=status.HTTP_201_CREATED)
+        else:
+            return Response({'error': 'No file found'}, status=status.HTTP_400_BAD_REQUEST)

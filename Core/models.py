@@ -32,7 +32,7 @@ class crncy_mstr(models.Model):
 #Nationality
 
 class Nationality(models.Model):
-    N_name=models.CharField(max_length=200,null=True,unique=True)
+    N_name=models.CharField(max_length=200,null=True)
 
     def __str__(self):
         return self.N_name

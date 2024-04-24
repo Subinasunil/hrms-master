@@ -6,7 +6,7 @@ from import_export.widgets import Widget
 from django.core.exceptions import ValidationError
 from django.db import models
 import re
-from Core.models import Document_type,state_mstr,cntry_mstr
+from Core.models import Document_type,state_mstr,cntry_mstr,Nationality
 from OrganisationManager.models import cmpny_mastr,brnch_mstr,ctgry_master,dept_master,desgntn_master
 from import_export.widgets import ForeignKeyWidget
 
@@ -43,7 +43,7 @@ class EmployeeResource(resources.ModelResource):
     emp_relegion = fields.Field(attribute='emp_relegion', column_name='Employee Religion')
     emp_profile_pic = fields.Field(attribute='emp_profile_pic', column_name='Employee Profile Picture')
     emp_blood_group = fields.Field(attribute='emp_blood_group', column_name='Employee Blood Group')
-    emp_nationality = fields.Field(attribute='emp_nationality', column_name='Employee Nationality')
+    emp_nationality_id = fields.Field(attribute='emp_nationality_id', column_name='Employee Nationality',widget=ForeignKeyWidget(Nationality, 'id'))
     emp_marital_status = fields.Field(attribute='emp_marital_status', column_name='Employee Marital Status')
     emp_father_name = fields.Field(attribute='emp_father_name', column_name='Employee Father Name')
     emp_mother_name = fields.Field(attribute='emp_mother_name', column_name='Employee Mother Name')
@@ -180,18 +180,7 @@ class EmployeeResource(resources.ModelResource):
         if marital_status and marital_status not in ['Single', 'Married', 'Other', 'S', 'M', 'D']:
             errors.append("Invalid value for marital status field. Allowed values are 'Single', 'Married', 'Other', 'S', 'M', or 'D'")      
         
-        # emp_company_code = row.get('Employee Company ID')
-
-        # if emp_company_code is None:
-        #     # Skip the assignment if the value is None
-        #     return
-
-        # # Check if cmpny_mastr with the given code exists
-        # try:
-        #     company_instance = cmpny_mastr.objects.get(code=emp_company_code)
-        #     row['emp_company_id'] = company_instance
-        # except cmpny_mastr.DoesNotExist:
-        #     raise ValidationError(f"cmpny_mastr with code {emp_company_code} does not exist.")
+        
 
 
         if errors:
@@ -204,20 +193,20 @@ class EmpCustomFieldResource(resources.ModelResource):
     TEXT_LIMIT_MAX = 1000000
     DATE_FORMAT = '%d-%m-%Y'
 
-    emp_master = fields.Field(attribute='emp_master', column_name='Employee Code', widget=ForeignKeyWidget(emp_master, 'id'))
+    emp_master = fields.Field(attribute='emp_master', column_name='Employee Code', widget=ForeignKeyWidget(emp_master, 'emp_login_id'))
     field_name = fields.Field(attribute='field_name', column_name='Field Name')
     field_value = fields.Field(attribute='field_value', column_name='Field Value')
 
     class Meta:
         model = Emp_CustomField
-        fields = ('id', 'emp_master', 'field_name', 'field_value')
+        fields = ('id','emp_master', 'field_name', 'field_value')
 
     def __init__(self):
         self.errors = []
 
     def before_import_row(self, row, row_idx=None, **kwargs):
         field_value = row.get('Field Value')  # Make sure this matches the custom heading in the Excel sheet
-        emp_master_id = row.get('Employee Code')  # Make sure this matches the custom heading in the Excel sheet
+        emp_login_id = row.get('Employee Code')  # Make sure this matches the custom heading in the Excel sheet
 
         if field_value is None:
             row['field_value'] = ""
@@ -240,8 +229,8 @@ class EmpCustomFieldResource(resources.ModelResource):
         else:
             raise ValueError(f"Invalid value '{field_value}' in row {row_idx}. Expected int, str, or None.")
 
-        if not emp_master.objects.filter(id=emp_master_id).exists():
-            raise ValidationError(f"emp_master matching query does not exist for ID: {emp_master_id}")
+        if not emp_master.objects.filter(emp_login_id=emp_login_id).exists():
+            raise ValidationError(f"emp_master with emp_code {emp_login_id} does not exist.")
 
     def after_import_row(self, row, row_result, **kwargs):
         if row_result.errors:
@@ -270,9 +259,9 @@ class EmpCustomFieldResource(resources.ModelResource):
    
     
 class DocumentResource(resources.ModelResource):
-    emp_id = fields.Field(attribute='emp_id', column_name='Employee ID',widget=ForeignKeyWidget(emp_master, 'id'))
+    emp_id = fields.Field(attribute='emp_id', column_name='Employee ID',widget=ForeignKeyWidget(emp_master, 'emp_login_id'))
     emp_sl_no = fields.Field(attribute='emp_sl_no', column_name='SerialNo')
-    emp_doc_type = fields.Field(attribute='emp_doc_type', column_name='Document Type',widget=ForeignKeyWidget(Document_type, 'id'))
+    emp_doc_type = fields.Field(attribute='emp_doc_type', column_name='Document Type',widget=ForeignKeyWidget(Document_type,'doc_type'))
     emp_doc_number = fields.Field(attribute='emp_doc_number', column_name='Document Number')
     emp_doc_issued_date = fields.Field(attribute='emp_doc_issued_date', column_name='Document Issued Date')
     emp_doc_expiry_date = fields.Field(attribute='emp_doc_expiry_date', column_name='Document Expiry Date')
@@ -298,16 +287,20 @@ class DocumentResource(resources.ModelResource):
     def before_import_row(self, row, **kwargs):
         errors = []
         
-        
-        employee_id = row.get('Employee ID')
-        doc_type_id = row.get('Document Type')
+        emp_sl_no = row.get('SerialNo')
+        emp_login_id = row.get('Employee ID')
+        doc_type = row.get('Document Type')
         
         # Validate emp_id and emp_doc_type
-        if not emp_master.objects.filter(id=employee_id).exists():
-            errors.append(f"emp_master matching query does not exist for ID: {employee_id}")
+        if Emp_Documents.objects.filter(emp_sl_no=emp_sl_no).exists():
+            errors.append(f"Duplicate value found for Employee Code: {emp_sl_no}")
+
+
+        if not emp_master.objects.filter(emp_login_id=emp_login_id).exists():
+            errors.append(f"emp_master matching query does not exist for ID: {emp_login_id}")
             # row_errors['emp_id'] = f"emp_master matching query does not exist for ID: {employee_id}"
-        if not Document_type.objects.filter(id=doc_type_id).exists():
-            errors.append(f"Document_type matching query does not exist for ID: {doc_type_id}")
+        if not Document_type.objects.filter(doc_type=doc_type).exists():
+            errors.append(f"Document_type matching query does not exist for ID: {doc_type}")
             
         
         # Validate date fields format
