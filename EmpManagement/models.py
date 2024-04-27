@@ -2,6 +2,8 @@
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
 import random
+from django.dispatch import receiver
+from django.db.models.signals import post_save
 from UserManagement.models import CustomUser
 from phonenumber_field.modelfields import PhoneNumberField
 from django.core.exceptions import ValidationError
@@ -27,7 +29,7 @@ class emp_master(models.Model):
         "S":"Single",
         "D":"Other",
     }
-    emp_login_id = models.CharField(max_length=50,unique=True,null=True,blank =True)
+    emp_code = models.CharField(max_length=50,unique=True,null=True,blank =True)
     emp_first_name = models.CharField(max_length=50,null=True,blank =True)
     emp_last_name = models.CharField(max_length=50,null=True,blank =True)
     emp_gender = models.CharField(max_length=10,choices=GENDER,null=True,blank =True)
@@ -78,7 +80,7 @@ class emp_master(models.Model):
             if created:
                 # Create a new user with default password
                 user_model = get_user_model()
-                username = self.emp_login_id
+                username = self.emp_code
                 password = 'admin'  # You can set a default password here
                 email = self.emp_personal_email
                 # Create the user
@@ -99,7 +101,7 @@ class emp_master(models.Model):
             super().save(*args, **kwargs)
 
     def __str__(self):
-        return self.emp_login_id or "Unnamed Employee"
+        return self.emp_code or "Unnamed Employee"
 
 class Emp_CustomField(models.Model):
     FIELD_TYPES = (   
@@ -192,9 +194,16 @@ class emp_family(models.Model):
     updated_by = models.ForeignKey('UserManagement.CustomUser', on_delete=models.SET_NULL, null=True, related_name='%(class)s_updated_by')
     is_active = models.BooleanField(default=True)
 
+    def save(self, *args, **kwargs):
+        # If emp_id is not set and if this instance has an emp_id related object, set it automatically
+        if not self.emp_id_id and hasattr(self, 'emp_id'):
+            self.emp_id_id = self.emp_id.id
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return f"{self.ef_sl_no }"
         # - {self.emp_login_id}"
+
 
 class EmpFamily_CustomField(models.Model):
     FIELD_TYPES = (
@@ -560,4 +569,47 @@ class EmpLeaveRequest(models.Model):
 
 
 
+class Skills_Master(models.Model):
+    emp_id =models.ForeignKey('emp_master',on_delete = models.CASCADE,related_name='emp_skills')
+    language = models.CharField(max_length=100, blank=True, null=True)
+    marketing = models.CharField(max_length=100, blank=True, null=True)
+    programming_language = models.CharField(max_length=100, blank=True, null=True)
+    value = models.JSONField(blank=True, null=True)
+
+    def save(self, *args, **kwargs):
+        self.value = self.get_selected_values()
+        super().save(*args, **kwargs)
+
+    def get_selected_values(self):
+        selected_values = {}
+        if self.language:
+            selected_values['language'] = self.get_all_values('language')
+        if self.marketing:
+            selected_values['marketing'] = self.get_all_values('marketing')
+        if self.programming_language:
+            selected_values['programming_language'] = self.get_all_values('programming_language')
+        return selected_values
+
+    def get_all_values(self, field_name):
+        all_values = Skills_Master.objects.values_list(field_name, flat=True).distinct()
+        return list(all_values)
+    
+    
+    
+    # def save(self, *args, **kwargs):
+    #     selected_fields = [field for field in [self.language, self.marketing, self.programming_language] if field]
+    #     fetched_data = {}  # Dictionary to store fetched data
+
+    #     # Fetch data from SkillMaster based on selected fields
+    #     for field in selected_fields:
+    #         if field == self.language:
+    #             fetched_data['language'] = list(set(Skills_Master.objects.filter(language=self.language).values_list('language', flat=True)))
+    #         elif field == self.marketing:
+    #             fetched_data['marketing'] = list(set(Skills_Master.objects.filter(marketing=self.marketing).values_list('marketing', flat=True)))
+    #         elif field == self.programming_language:
+    #             fetched_data['programming_language'] = list(set(Skills_Master.objects.filter(programming_language=self.programming_language).values_list('programming_language', flat=True)))
+
+    #     self.value = fetched_data  # Assign fetched data to the 'value' field
+    #     super().save(*args, **kwargs)
+   
     

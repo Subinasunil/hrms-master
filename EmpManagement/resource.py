@@ -1,6 +1,6 @@
 from import_export import resources,fields
 from datetime import datetime
-from .models import emp_master, Emp_CustomField,Emp_Documents
+from .models import emp_master, Emp_CustomField,Emp_Documents,Skills_Master
 from import_export.widgets import DateWidget
 from import_export.widgets import Widget
 from django.core.exceptions import ValidationError
@@ -23,7 +23,7 @@ class NumericMobileNumberWidget(Widget):
         return None
 
 class EmployeeResource(resources.ModelResource):
-    emp_login_id = fields.Field(attribute='emp_login_id', column_name='Employee Code')
+    emp_code = fields.Field(attribute='emp_login_id', column_name='Employee Code')
     emp_first_name = fields.Field(attribute='emp_first_name', column_name='Employee First Name')
     emp_last_name = fields.Field(attribute='emp_last_name', column_name='Employee Last Name')
     emp_gender = fields.Field(attribute='emp_gender', column_name='Employee Gender')
@@ -70,7 +70,7 @@ class EmployeeResource(resources.ModelResource):
         # report_skipped = False
        
         fields = ('id',
-            'emp_login_id',
+            'emp_code',
             'emp_first_name',
             'emp_last_name',
             'emp_gender',
@@ -120,7 +120,7 @@ class EmployeeResource(resources.ModelResource):
         personal_email = row.get('Employee Personal Email ID')
 
         
-        if emp_master.objects.filter(emp_login_id=login_id).exists():
+        if emp_master.objects.filter(emp_code=login_id).exists():
             errors.append(f"Duplicate value found for Employee Code: {login_id}")
            
             
@@ -193,7 +193,7 @@ class EmpCustomFieldResource(resources.ModelResource):
     TEXT_LIMIT_MAX = 1000000
     DATE_FORMAT = '%d-%m-%Y'
 
-    emp_master = fields.Field(attribute='emp_master', column_name='Employee Code', widget=ForeignKeyWidget(emp_master, 'emp_login_id'))
+    emp_master = fields.Field(attribute='emp_master', column_name='Employee Code', widget=ForeignKeyWidget(emp_master, 'emp_code'))
     field_name = fields.Field(attribute='field_name', column_name='Field Name')
     field_value = fields.Field(attribute='field_value', column_name='Field Value')
 
@@ -206,7 +206,7 @@ class EmpCustomFieldResource(resources.ModelResource):
 
     def before_import_row(self, row, row_idx=None, **kwargs):
         field_value = row.get('Field Value')  # Make sure this matches the custom heading in the Excel sheet
-        emp_login_id = row.get('Employee Code')  # Make sure this matches the custom heading in the Excel sheet
+        emp_code = row.get('Employee Code')  # Make sure this matches the custom heading in the Excel sheet
 
         if field_value is None:
             row['field_value'] = ""
@@ -229,8 +229,8 @@ class EmpCustomFieldResource(resources.ModelResource):
         else:
             raise ValueError(f"Invalid value '{field_value}' in row {row_idx}. Expected int, str, or None.")
 
-        if not emp_master.objects.filter(emp_login_id=emp_login_id).exists():
-            raise ValidationError(f"emp_master with emp_code {emp_login_id} does not exist.")
+        if not emp_master.objects.filter(emp_code=emp_code).exists():
+            raise ValidationError(f"emp_master with emp_code {emp_code} does not exist.")
 
     def after_import_row(self, row, row_result, **kwargs):
         if row_result.errors:
@@ -259,7 +259,7 @@ class EmpCustomFieldResource(resources.ModelResource):
    
     
 class DocumentResource(resources.ModelResource):
-    emp_id = fields.Field(attribute='emp_id', column_name='Employee ID',widget=ForeignKeyWidget(emp_master, 'emp_login_id'))
+    emp_id = fields.Field(attribute='emp_id', column_name='Employee ID',widget=ForeignKeyWidget(emp_master, 'emp_code'))
     emp_sl_no = fields.Field(attribute='emp_sl_no', column_name='SerialNo')
     emp_doc_type = fields.Field(attribute='emp_doc_type', column_name='Document Type',widget=ForeignKeyWidget(Document_type,'doc_type'))
     emp_doc_number = fields.Field(attribute='emp_doc_number', column_name='Document Number')
@@ -288,7 +288,7 @@ class DocumentResource(resources.ModelResource):
         errors = []
         
         emp_sl_no = row.get('SerialNo')
-        emp_login_id = row.get('Employee ID')
+        emp_code = row.get('Employee ID')
         doc_type = row.get('Document Type')
         
         # Validate emp_id and emp_doc_type
@@ -296,8 +296,8 @@ class DocumentResource(resources.ModelResource):
             errors.append(f"Duplicate value found for Employee Code: {emp_sl_no}")
 
 
-        if not emp_master.objects.filter(emp_login_id=emp_login_id).exists():
-            errors.append(f"emp_master matching query does not exist for ID: {emp_login_id}")
+        if not emp_master.objects.filter(emp_code=emp_code).exists():
+            errors.append(f"emp_master matching query does not exist for ID: {emp_code}")
             # row_errors['emp_id'] = f"emp_master matching query does not exist for ID: {employee_id}"
         if not Document_type.objects.filter(doc_type=doc_type).exists():
             errors.append(f"Document_type matching query does not exist for ID: {doc_type}")
@@ -327,7 +327,10 @@ class DocumentResource(resources.ModelResource):
 
 
        
-
+class SkillsMasterResource(resources.ModelResource):
+    class Meta:
+        model = Skills_Master
+        fields = ('id','emp_id','language','marketing','programming_language')
 
 
 
@@ -337,7 +340,7 @@ class EmpResource_Export(resources.ModelResource):
         model = emp_master
        
         fields = ('id',
-            'emp_login_id',
+            'emp_code',
             'emp_first_name',
             'emp_last_name',
             'emp_gender',
@@ -376,5 +379,6 @@ class EmpResource_Export(resources.ModelResource):
             # Many-to-Many field
             'emp_languages',
         )
+
 
     

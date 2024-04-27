@@ -3,7 +3,7 @@ from rest_framework.routers import DefaultRouter
 from .views import (EmpFamViewSet, EmpJobHistoryvSet, EmpViewSet,
                     Emp_QualificationViewSet, Emp_DocumentViewSet, EmpLeaveRequestViewSet,EmpbulkuploadViewSet,
                     CustomFieldViewset,EmpFam_CustomFieldViewset,EmpJobHistory_UdfViewset,EmpQf_UdfViewset,EmpDoc_UdfViewset,
-                    Bulkupload_DocumentViewSet)
+                    Bulkupload_DocumentViewSet,SkillMasterViewSet,SkillsBlkupldViewSet)
                    
 
 # Define the main router for top-level routes
@@ -20,9 +20,9 @@ router.register(r'empQualification-UDF', EmpQf_UdfViewset, basename='emp_qualifi
 router.register(r'emp-Documents', Emp_DocumentViewSet, basename='emp_document')
 router.register(r'Bulkupload-Documents', Bulkupload_DocumentViewSet, basename='bulk_upload_document')
 router.register(r'emp-Documents-UDF', EmpDoc_UdfViewset, basename='emp_document_udf')
-
 router.register(r'emp-leave-request', EmpLeaveRequestViewSet)
-
+router.register(r'emp-skill', SkillMasterViewSet, basename='emp_skill')
+router.register(r'emp-skill-blkupld', SkillsBlkupldViewSet, basename='emp_skillblkupld')
 # Define nested routes for accessing related resources under each employee
 employee_router = DefaultRouter()
 employee_router.register(r'emp-bulkupload', EmpbulkuploadViewSet, basename='emp-bulkupload')

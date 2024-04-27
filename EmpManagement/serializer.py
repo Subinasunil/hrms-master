@@ -9,7 +9,8 @@ import pandas as pd
 
 
 from .models import (emp_family,EmpJobHistory,EmpQualification,Emp_Documents,EmpLeaveRequest,emp_master,Emp_CustomField,
-                    EmpFamily_CustomField,EmpJobHistory_CustomField,EmpQualification_CustomField,EmpDocuments_CustomField)
+                    EmpFamily_CustomField,EmpJobHistory_CustomField,EmpQualification_CustomField,EmpDocuments_CustomField,
+                    Skills_Master)
 
 '''employee set'''
 
@@ -154,8 +155,20 @@ class CustomFieldSerializer(serializers.ModelSerializer):
                     raise ValidationError("Date must be in the format dd-mm-yyyy.")
 
         return value
-            
 
+
+class SkillsBlkupldSerializer(serializers.ModelSerializer):
+    file = serializers.FileField(write_only=True) 
+    class Meta:
+        model = Skills_Master
+        fields = '__all__'           
+
+class SkillMasterSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Skills_Master
+        fields = '__all__'
+
+    
 #EMPLOYEE SERIALIZER
 class EmpSerializer(serializers.ModelSerializer):
     

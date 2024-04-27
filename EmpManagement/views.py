@@ -3,11 +3,11 @@ from django.shortcuts import render
 from Core.models import Document_type
 from .models import (emp_family,Emp_Documents,EmpJobHistory,EmpLeaveRequest,EmpQualification,
                      emp_master,Emp_CustomField,EmpFamily_CustomField,EmpJobHistory_CustomField,
-                     EmpQualification_CustomField,EmpDocuments_CustomField,)
+                     EmpQualification_CustomField,EmpDocuments_CustomField,Skills_Master)
 from .serializer import (Emp_qf_Serializer,EmpFamSerializer,EmpSerializer,
                          EmpJobHistorySerializer,EmpLeaveRequestSerializer,DocumentSerializer,EmpBulkUploadSerializer,CustomFieldSerializer,
                          EmpFam_CustomFieldSerializer,EmpJobHistory_Udf_Serializer,Emp_qf_udf_Serializer,EmpDocuments_Udf_Serializer,
-                         DocBulkuploadSerializer)
+                         DocBulkuploadSerializer,SkillMasterSerializer,SkillsBlkupldSerializer)
 from rest_framework.decorators import action,api_view
 from rest_framework import viewsets,filters,parsers
 from rest_framework.response import Response
@@ -21,7 +21,7 @@ from rest_framework.parsers import JSONParser
 from django.http import FileResponse,HttpResponse
 from openpyxl import Workbook
 from rest_framework.parsers import MultiPartParser, FormParser
-from .resource import EmployeeResource,EmpResource_Export,EmpCustomFieldResource,DocumentResource
+from .resource import EmployeeResource,EmpResource_Export,EmpCustomFieldResource,DocumentResource,SkillsMasterResource
 import tablib
 import pandas as pd
 import openpyxl
@@ -605,3 +605,48 @@ class EmpLeaveRequestViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     def get_serializer_context(self):
         return {'request': self.request}
+    
+
+class SkillMasterViewSet(viewsets.ModelViewSet):
+    queryset = Skills_Master.objects.all()
+    serializer_class = SkillMasterSerializer
+
+
+#nationality bulkupload
+class SkillsBlkupldViewSet(viewsets.ModelViewSet):
+    queryset = Skills_Master.objects.all()
+    serializer_class = SkillsBlkupldSerializer
+    permission_classes = [IsAuthenticated]
+    parser_classes = (MultiPartParser, FormParser)
+
+    @action(detail=False, methods=['post'], parser_classes=[MultiPartParser, FormParser])
+    def bulk_upload(self, request):
+        if request.method == 'POST' and request.FILES.get('file'):
+            excel_file = request.FILES['file']
+            
+            # Check if the uploaded file is an Excel file
+            if not excel_file.name.endswith('.xlsx'):
+                return Response({'error': 'Only Excel files (.xlsx) are supported'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            try:
+                # Read the Excel file using pandas
+                df = pd.read_excel(excel_file)
+                
+                # Iterate through each row in the DataFrame
+                for index, row in df.iterrows():
+                    # Get the emp_master instance corresponding to the emp_id
+                    emp_instance = emp_master.objects.get(id=row['emp_id'])
+                    
+                    # Create a Skills_Master object with the emp_instance
+                    Skills_Master.objects.create(
+                        emp_id=emp_instance,
+                        language=row['language'],
+                        marketing=row['marketing'],
+                        programming_language=row['programming_language']
+                    )
+            except Exception as e:
+                return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+            return Response({'message': 'Bulk upload successful'}, status=status.HTTP_201_CREATED)
+        else:
+            return Response({'error': 'No file found'}, status=status.HTTP_400_BAD_REQUEST)
