@@ -3,7 +3,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.db import models
 import random
 from django.dispatch import receiver
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save,pre_save
 from UserManagement.models import CustomUser
 from phonenumber_field.modelfields import PhoneNumberField
 from django.core.exceptions import ValidationError
@@ -16,6 +16,7 @@ import datetime,json
 from django.core.validators import validate_email
 from datetime import datetime
 import re
+
 
 class emp_master(models.Model):
 
@@ -176,7 +177,6 @@ class Emp_CustomField(models.Model):
                 raise ValueError(f"Invalid value '{self.field_value}' for data type '{self.data_type}'.")
         
         super().save(*args, **kwargs)
-    
     
 
 
@@ -568,48 +568,77 @@ class EmpLeaveRequest(models.Model):
     reason=models.CharField(max_length=150,default='its ook')
 
 
+class LanguageSkill(models.Model):
+    language = models.CharField(max_length=100,null=True,blank =True,default=None)
+    
+    def __str__(self):
+        return f"{self.language }"
 
-class Skills_Master(models.Model):
+class MarketingSkill(models.Model):
+    marketing = models.CharField(max_length=100,null=True,blank =True,default=None)
+
+    def __str__(self):
+        return f"{self.marketing }"
+
+class ProgrammingLanguageSkill(models.Model):
+    programming_language = models.CharField(max_length=100,null=True,blank =True,default=None)
+
+    def __str__(self):
+        return f"{self.programming_language }"
+
+class EmployeeSkill(models.Model):
     emp_id =models.ForeignKey('emp_master',on_delete = models.CASCADE,related_name='emp_skills')
-    language = models.CharField(max_length=100, blank=True, null=True)
-    marketing = models.CharField(max_length=100, blank=True, null=True)
-    programming_language = models.CharField(max_length=100, blank=True, null=True)
-    value = models.JSONField(blank=True, null=True)
+    language_skill = models.ForeignKey(LanguageSkill, on_delete=models.SET_NULL, null=True, blank=True)
+    marketing_skill = models.ForeignKey(MarketingSkill, on_delete=models.SET_NULL, null=True, blank=True)
+    programming_language_skill = models.ForeignKey(ProgrammingLanguageSkill, on_delete=models.SET_NULL, null=True, blank=True)
+    value = models.CharField(max_length=100,null=True,blank =True,default=None)
+    percentage = models.DecimalField(max_digits=5, decimal_places=2, default=None, null=True, blank=True)
 
-    def save(self, *args, **kwargs):
-        self.value = self.get_selected_values()
-        super().save(*args, **kwargs)
+@receiver(pre_save, sender=EmployeeSkill)
+def update_value_field(sender, instance, **kwargs):
+    if instance.language_skill:
+        instance.value = instance.language_skill.language
+    elif instance.marketing_skill:
+        instance.value = instance.marketing_skill.marketing
+    elif instance.programming_language_skill:
+        instance.value = instance.programming_language_skill.programming_language
 
-    def get_selected_values(self):
-        selected_values = {}
-        if self.language:
-            selected_values['language'] = self.get_all_values('language')
-        if self.marketing:
-            selected_values['marketing'] = self.get_all_values('marketing')
-        if self.programming_language:
-            selected_values['programming_language'] = self.get_all_values('programming_language')
-        return selected_values
 
-    def get_all_values(self, field_name):
-        all_values = Skills_Master.objects.values_list(field_name, flat=True).distinct()
-        return list(all_values)
+# class Skills_Master(models.Model):
+#     emp_id =models.ForeignKey('emp_master',on_delete = models.CASCADE,related_name='emp_skills')
+#     language = models.CharField(max_length=100, blank=True, null=True)
+#     marketing = models.CharField(max_length=100, blank=True, null=True)
+#     programming_language = models.CharField(max_length=100, blank=True, null=True)
+#     value = models.JSONField(blank=True, null=True)
+
+#     def save(self, *args, **kwargs):
+#         self.value = self.get_selected_values()
+#         super().save(*args, **kwargs)
+
+
+#     def get_selected_values(self):
+#         selected_values = {}
+#         if self.language:
+#             selected_values['language'] = self.get_all_values('language')
+#         if self.marketing:
+#             selected_values['marketing'] = self.get_all_values('marketing')
+#         if self.programming_language:
+#             selected_values['programming_language'] = self.get_all_values('programming_language')
+#         return selected_values
+
+#     def get_all_values(self, field_name):
+#         all_values = Skills_Master.objects.values_list(field_name, flat=True).distinct()
+#         return list(all_values)
+
     
     
     
-    # def save(self, *args, **kwargs):
-    #     selected_fields = [field for field in [self.language, self.marketing, self.programming_language] if field]
-    #     fetched_data = {}  # Dictionary to store fetched data
+    
+    
+    
+    
+    
+    
+    
 
-    #     # Fetch data from SkillMaster based on selected fields
-    #     for field in selected_fields:
-    #         if field == self.language:
-    #             fetched_data['language'] = list(set(Skills_Master.objects.filter(language=self.language).values_list('language', flat=True)))
-    #         elif field == self.marketing:
-    #             fetched_data['marketing'] = list(set(Skills_Master.objects.filter(marketing=self.marketing).values_list('marketing', flat=True)))
-    #         elif field == self.programming_language:
-    #             fetched_data['programming_language'] = list(set(Skills_Master.objects.filter(programming_language=self.programming_language).values_list('programming_language', flat=True)))
-
-    #     self.value = fetched_data  # Assign fetched data to the 'value' field
-    #     super().save(*args, **kwargs)
-   
     

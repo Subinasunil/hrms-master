@@ -3,7 +3,8 @@ from rest_framework.routers import DefaultRouter
 from .views import (EmpFamViewSet, EmpJobHistoryvSet, EmpViewSet,
                     Emp_QualificationViewSet, Emp_DocumentViewSet, EmpLeaveRequestViewSet,EmpbulkuploadViewSet,
                     CustomFieldViewset,EmpFam_CustomFieldViewset,EmpJobHistory_UdfViewset,EmpQf_UdfViewset,EmpDoc_UdfViewset,
-                    Bulkupload_DocumentViewSet,SkillMasterViewSet,SkillsBlkupldViewSet)
+                    Bulkupload_DocumentViewSet,LanguageSkillViewSet,MarketingSkillViewSet,ProgrammingLanguageSkillViewSet,EmployeeSkillViewSet,
+                    LanguageBlkupldViewSet,ProLangBlkupldViewSet,MarketingBlkupldViewSet)
                    
 
 # Define the main router for top-level routes
@@ -21,8 +22,14 @@ router.register(r'emp-Documents', Emp_DocumentViewSet, basename='emp_document')
 router.register(r'Bulkupload-Documents', Bulkupload_DocumentViewSet, basename='bulk_upload_document')
 router.register(r'emp-Documents-UDF', EmpDoc_UdfViewset, basename='emp_document_udf')
 router.register(r'emp-leave-request', EmpLeaveRequestViewSet)
-router.register(r'emp-skill', SkillMasterViewSet, basename='emp_skill')
-router.register(r'emp-skill-blkupld', SkillsBlkupldViewSet, basename='emp_skillblkupld')
+router.register(r'emp-language-skill',LanguageSkillViewSet, basename='emp_language_skill')
+router.register(r'emp-marketing-skill',MarketingSkillViewSet, basename='emp_marketing_skill')
+router.register(r'emp-programing-language-skill',ProgrammingLanguageSkillViewSet, basename='emp_programming_language_skill')
+router.register(r'emp-skill',EmployeeSkillViewSet, basename='emp_skill')
+# router.register(r'emp-skill', SkillMasterViewSet, basename='emp_skill')
+router.register(r'emp-language-skill-blkupld', LanguageBlkupldViewSet, basename='emp_language_skillblkupld')
+router.register(r'emp-marketing-skill-blkupld', MarketingBlkupldViewSet, basename='emp_marketing_skillblkupld')
+router.register(r'emp-programming-skill-blkupld', ProLangBlkupldViewSet, basename='emp_programming_skillblkupld')
 # Define nested routes for accessing related resources under each employee
 employee_router = DefaultRouter()
 employee_router.register(r'emp-bulkupload', EmpbulkuploadViewSet, basename='emp-bulkupload')

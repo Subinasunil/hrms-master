@@ -10,7 +10,7 @@ import pandas as pd
 
 from .models import (emp_family,EmpJobHistory,EmpQualification,Emp_Documents,EmpLeaveRequest,emp_master,Emp_CustomField,
                     EmpFamily_CustomField,EmpJobHistory_CustomField,EmpQualification_CustomField,EmpDocuments_CustomField,
-                    Skills_Master)
+                    LanguageSkill,MarketingSkill,ProgrammingLanguageSkill,EmployeeSkill)
 
 '''employee set'''
 
@@ -157,18 +157,56 @@ class CustomFieldSerializer(serializers.ModelSerializer):
         return value
 
 
-class SkillsBlkupldSerializer(serializers.ModelSerializer):
+# class SkillsBlkupldSerializer(serializers.ModelSerializer):
+#     file = serializers.FileField(write_only=True) 
+#     class Meta:
+#         model = Skills_Master
+#         fields = '__all__'           
+
+# class SkillMasterSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = Skills_Master
+#         fields = '__all__'
+
+class LanguageBlkupldSerializer(serializers.ModelSerializer):
     file = serializers.FileField(write_only=True) 
     class Meta:
-        model = Skills_Master
-        fields = '__all__'           
-
-class SkillMasterSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Skills_Master
+        model = LanguageSkill
         fields = '__all__'
 
-    
+class MarketingBlkupldSerializer(serializers.ModelSerializer):
+    file = serializers.FileField(write_only=True) 
+    class Meta:
+        model = MarketingSkill
+        fields = '__all__'
+
+class ProLangBlkupldSerializer(serializers.ModelSerializer):
+    file = serializers.FileField(write_only=True) 
+    class Meta:
+        model = ProgrammingLanguageSkill
+        fields = '__all__'
+
+class LanguageSkillSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = LanguageSkill
+        fields = '__all__'
+
+class MarketingSkillSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MarketingSkill
+        fields = '__all__'
+
+class ProgrammingLanguageSkillSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProgrammingLanguageSkill
+        fields = '__all__'
+
+class EmployeeSkillSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = EmployeeSkill
+        fields = '__all__'
+
+
 #EMPLOYEE SERIALIZER
 class EmpSerializer(serializers.ModelSerializer):
     

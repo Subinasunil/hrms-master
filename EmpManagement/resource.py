@@ -1,6 +1,6 @@
 from import_export import resources,fields
 from datetime import datetime
-from .models import emp_master, Emp_CustomField,Emp_Documents,Skills_Master
+from .models import emp_master, Emp_CustomField,Emp_Documents,LanguageSkill,MarketingSkill,ProgrammingLanguageSkill
 from import_export.widgets import DateWidget
 from import_export.widgets import Widget
 from django.core.exceptions import ValidationError
@@ -327,13 +327,20 @@ class DocumentResource(resources.ModelResource):
 
 
        
-class SkillsMasterResource(resources.ModelResource):
+class LanguageSkillResource(resources.ModelResource):
     class Meta:
-        model = Skills_Master
-        fields = ('id','emp_id','language','marketing','programming_language')
+        model = LanguageSkill
+        fields = ('id','language')
 
+class MarketingSkillResource(resources.ModelResource):
+    class Meta:
+        model = MarketingSkill
+        fields = ('id','marketing')
 
-
+class ProLangSkillResource(resources.ModelResource):
+    class Meta:
+        model = ProgrammingLanguageSkill
+        fields = ('id','programming_language ')
 
 class EmpResource_Export(resources.ModelResource):
     class Meta:
