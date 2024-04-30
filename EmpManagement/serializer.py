@@ -216,7 +216,7 @@ class EmpSerializer(serializers.ModelSerializer):
     emp_qualification = Emp_qf_Serializer(many=True, read_only=True)
     emp_job_history = EmpJobHistorySerializer(many=True, read_only=True)
     custom_fields = CustomFieldSerializer(many=True, read_only=True)
-    
+    emp_skills= EmployeeSkillSerializer(many=True, read_only=True)
 
     created_by = serializers.HiddenField(default=serializers.CurrentUserDefault())
     updated_by = serializers.HiddenField(default=serializers.CurrentUserDefault())

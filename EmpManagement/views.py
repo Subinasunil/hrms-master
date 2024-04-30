@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.shortcuts import render
+
 from Core.models import Document_type
 from .models import (emp_family,Emp_Documents,EmpJobHistory,EmpLeaveRequest,EmpQualification,
                      emp_master,Emp_CustomField,EmpFamily_CustomField,EmpJobHistory_CustomField,
@@ -19,7 +20,8 @@ from rest_framework.permissions import IsAuthenticated,AllowAny,IsAuthenticatedO
 from rest_framework.parsers import JSONParser
 # from rest_framework.decorators import api_view
 # from rest_framework.response import Response
-from django.http import FileResponse,HttpResponse
+from django.http import FileResponse,HttpResponse,JsonResponse
+
 from openpyxl import Workbook
 from rest_framework.parsers import MultiPartParser, FormParser
 from .resource import EmployeeResource,EmpResource_Export,EmpCustomFieldResource,DocumentResource,LanguageSkillResource,MarketingSkillResource,ProLangSkillResource
@@ -254,6 +256,102 @@ class EmpViewSet(viewsets.ModelViewSet):
         pdf.build(elements)
 
         return response
+
+    @action(detail=False, methods=['get'])
+    def emp_excel_report(self, request, *args, **kwargs):
+    # Query employee details from the database
+        employees = emp_master.objects.all()
+
+        # Create a response object
+        response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        response['Content-Disposition'] = 'attachment; filename="employee_report.xlsx"'
+
+        # Create an Excel workbook and add a worksheet
+        workbook = xlsxwriter.Workbook(response)
+        worksheet = workbook.add_worksheet()
+
+        # Add column headers
+        headers = ["ID", "FirstName", "LastName", "Gender", "DOB", "Email", "Mobile Number","Mobile Number2", "Country", "State", "City", "Permanent Address", "Present Address", "Status", "Hired Date", "Religion", "Blood Group", "Nationality", "Marital Status", "Father Name", "Mother Name", "Posting Location", "Created At", "Created By", "Updated At", "Updated By", "Active", "OT Applicable", "Company", "Branch", "Department", "Designation", "Category"]
+        for col, header in enumerate(headers):
+            worksheet.write(0, col, header)
+
+        # Write data rows
+        for row, employee in enumerate(employees, start=1):
+            worksheet.write(row, 0, employee.emp_code)
+            worksheet.write(row, 1, employee.emp_first_name)
+            worksheet.write(row, 2, employee.emp_last_name)
+            worksheet.write(row, 3, employee.get_emp_gender_display() if employee.emp_gender else "")
+            worksheet.write(row, 4, employee.emp_date_of_birth)
+            worksheet.write(row, 5, employee.emp_personal_email)
+            worksheet.write(row, 6, employee.emp_mobile_number_1)
+            worksheet.write(row, 7, employee.emp_mobile_number_2)
+            worksheet.write(row, 8, employee.emp_country_id.country_name if employee.emp_country_id else "",)
+            worksheet.write(row, 9, employee.emp_state_id.state_name if employee.emp_state_id else "",)
+            worksheet.write(row, 10, employee.emp_city)
+            worksheet.write(row, 11, employee.emp_permenent_address)
+            worksheet.write(row, 12, employee.emp_present_address)
+            worksheet.write(row, 13, employee.emp_status)
+            worksheet.write(row, 14, employee.emp_hired_date)
+            worksheet.write(row, 15, employee.emp_active_date)
+            worksheet.write(row, 16, employee.emp_relegion)
+            # worksheet.write(row, 17, employee.emp_profile_pic)
+            worksheet.write(row, 18, employee.emp_blood_group)
+            worksheet.write(row, 19, employee.emp_nationality_id.N_name if employee.emp_nationality_id else "",)
+            worksheet.write(row, 20, employee.emp_marital_status)
+            worksheet.write(row, 21, employee.emp_father_name)
+            worksheet.write(row, 22, employee.emp_mother_name)
+            worksheet.write(row, 23, employee.emp_posting_location)
+            worksheet.write(row, 24, employee.is_active)
+            worksheet.write(row, 25, employee.epm_ot_applicable)
+            worksheet.write(row, 26, employee.emp_company_id.cmpny_name if employee.emp_company_id else "",)
+            worksheet.write(row, 27, employee.emp_branch_id.branch_name if employee.emp_branch_id else "",)
+            worksheet.write(row, 28, employee.emp_dept_id.dept_name if employee.emp_dept_id else "",)
+            worksheet.write(row, 29, employee.emp_desgntn_id.job_title if employee.emp_desgntn_id else "",)
+            worksheet.write(row, 30, employee.emp_ctgry_id.catogary_title if employee.emp_ctgry_id else "")
+            # worksheet.write(row, 31, employee.emp_languages)
+            
+            
+
+        # Close the workbook
+        workbook.close()
+        return response
+    
+    
+    @action(detail=False, methods=['get'])
+    def available_fields(self, request):
+        # Fetch all fields from the emp_master model
+        available_fields = [field.name for field in emp_master._meta.fields]
+        return JsonResponse({'fields': available_fields})
+    
+    @action(detail=False, methods=['post'])
+    def generate_report(self, request):
+        selected_fields = request.data.get('fields', [])  # Get selected fields from request data
+        
+        # Ensure at least one field is selected
+        if not selected_fields:
+            return HttpResponse("Please select at least one field.", status=400)
+        
+        # Fetch data from the database based on selected fields
+        queryset = emp_master.objects.values_list(*selected_fields)
+
+        # Create a workbook and add a worksheet
+        workbook = Workbook()
+        worksheet = workbook.active
+
+        # Write headers
+        worksheet.append(selected_fields)
+
+        # Write data rows
+        for row in queryset:
+            worksheet.append(row)
+
+        # Save the workbook to a response
+        response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        response['Content-Disposition'] = 'attachment; filename="report.xlsx"'
+        workbook.save(response)
+
+        return response
+
 class CustomFieldViewset(viewsets.ModelViewSet):
     queryset = Emp_CustomField.objects.all()
     serializer_class = CustomFieldSerializer
@@ -740,7 +838,15 @@ class ProLangBlkupldViewSet(viewsets.ModelViewSet):
 
 
 
-
+# def create_employee_skill(request):
+#     if request.method == 'POST':
+#         form = EmployeeSkillForm(request.POST)
+#         if form.is_valid():
+#             form.save()
+#             # Redirect or do something else on successful form submission
+#     else:
+#         form = EmployeeSkillForm()
+#     return render(request, 'your_template.html', {'form': form})
 
 # class SkillMasterViewSet(viewsets.ModelViewSet):
 #     queryset = Skills_Master.objects.all()

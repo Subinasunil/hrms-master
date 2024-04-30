@@ -90,7 +90,7 @@ class EmployeeResource(resources.ModelResource):
             'emp_relegion',
             'emp_profile_pic',
             'emp_blood_group',
-            'emp_nationality',
+            'emp_nationality_id',
             'emp_marital_status',
             'emp_father_name',
             'emp_mother_name',

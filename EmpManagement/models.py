@@ -604,33 +604,7 @@ def update_value_field(sender, instance, **kwargs):
         instance.value = instance.programming_language_skill.programming_language
 
 
-# class Skills_Master(models.Model):
-#     emp_id =models.ForeignKey('emp_master',on_delete = models.CASCADE,related_name='emp_skills')
-#     language = models.CharField(max_length=100, blank=True, null=True)
-#     marketing = models.CharField(max_length=100, blank=True, null=True)
-#     programming_language = models.CharField(max_length=100, blank=True, null=True)
-#     value = models.JSONField(blank=True, null=True)
 
-#     def save(self, *args, **kwargs):
-#         self.value = self.get_selected_values()
-#         super().save(*args, **kwargs)
-
-
-#     def get_selected_values(self):
-#         selected_values = {}
-#         if self.language:
-#             selected_values['language'] = self.get_all_values('language')
-#         if self.marketing:
-#             selected_values['marketing'] = self.get_all_values('marketing')
-#         if self.programming_language:
-#             selected_values['programming_language'] = self.get_all_values('programming_language')
-#         return selected_values
-
-#     def get_all_values(self, field_name):
-#         all_values = Skills_Master.objects.values_list(field_name, flat=True).distinct()
-#         return list(all_values)
-
-    
     
     
     
