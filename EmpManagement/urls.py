@@ -47,6 +47,8 @@ urlpatterns = [
     path('api/Employee/bulk-upload/', EmpViewSet.as_view({'post': 'bulk_upload'}), name='bulk-upload'),
     path('api/Employee/emp_pdf_report/', EmpViewSet.as_view({'get': 'emp_pdf_report'}), name='emp_pdf_report'),
     path('api/Employee/<int:pk>/add_custom_field/', EmpViewSet.as_view({'patch': 'add_field'}), name='add_custom_field'),
+    path('employee/api/Employee/select_fields/', EmpViewSet.as_view({'get': 'select_fields'}), name='select_fields'),
+    path('employee/api/Employee/emp_select_report/', EmpViewSet.as_view({'post': 'emp_select_report'}), name='emp_select_report')
     
     
     

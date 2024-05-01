@@ -1,0 +1,14 @@
+<!-- <form method="post" action="/employee/api/Employee/emp_select_fields/">
+    {% csrf_token %}
+    {% for field in available_fields %}
+        <input type="checkbox" name="fields" value="{{ field }}"> {{ field }} <br>
+    {% endfor %}
+    <button type="submit">Generate Report</button>
+</form> -->
+<form method="post" action="{% url 'emp_select_report' %}">
+    {% csrf_token %}
+    {% for field in available_fields %}
+        <input type="checkbox" name="fields" value="{{ field }}"> {{ field }} <br>
+    {% endfor %}
+    <button type="submit">Generate Report</button>
+</form>
