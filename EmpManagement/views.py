@@ -54,6 +54,7 @@ import requests
 import json
 from collections import defaultdict
 
+
 # from django. utils. timezone import timedelta
 # from django.utils import timezone
 # from UserManagement.models import CustomUser
@@ -269,8 +270,8 @@ class EmpViewSet(viewsets.ModelViewSet):
         # Create an Excel workbook and add a worksheet
         workbook = xlsxwriter.Workbook(response)
         worksheet = workbook.add_worksheet()
-
-        # Add column headers
+        
+                # Add column headers
         headers = ["Employee Code", "FirstName", "LastName", "Gender", "DOB", "Email", "Mobile Number","Mobile Number2", "Country", "State", "City", "Permanent Address", "Present Address", "Status", "Hired Date","Active Date", "Religion", "Blood Group", "Nationality", "Marital Status", "Father Name", "Mother Name", "Posting Location", "Active", "OT Applicable", "Company", "Branch", "Department", "Designation", "Category"]
         for col, header in enumerate(headers):
             worksheet.write(0, col, header)
@@ -330,8 +331,7 @@ class EmpViewSet(viewsets.ModelViewSet):
         # Pass available fields to the template
         return render(request, 'select.html', {'available_fields': available_fields})
 
-
-    @action(detail=False, methods=['post'])
+    # @action(detail=False, methods=['post'])
     def emp_select_report(self, request, *args, **kwargs):
         # Get the list of fields selected by the user from the request data
         fields_to_include = request.POST.getlist('fields', [])
@@ -350,8 +350,8 @@ class EmpViewSet(viewsets.ModelViewSet):
             "emp_personal_email": "Email",
             "emp_mobile_number_1": "Mobile Number",
             "emp_mobile_number_2": "Mobile Number2",
-            "emp_country_id__country_name": "Country",
-            "emp_state_id__state_name": "State",
+            "emp_country_id": "Country",
+            "emp_state_id": "State",
             "emp_city": "City",
             "emp_permenent_address": "Permanent Address",
             "emp_present_address": "Present Address",
@@ -377,7 +377,7 @@ class EmpViewSet(viewsets.ModelViewSet):
 
         # Query employee details from the database
         employees = emp_master.objects.all()
-  
+
         # Create a response object
         response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
         response['Content-Disposition'] = 'attachment; filename="employee_report.xlsx"'
@@ -385,124 +385,58 @@ class EmpViewSet(viewsets.ModelViewSet):
         # Create an Excel workbook and add a worksheet
         workbook = xlsxwriter.Workbook(response)
         worksheet = workbook.add_worksheet()
-
+        
         # Write column headers for the selected fields
         headers = [column_headings.get(field, field) for field in fields_to_include]
         for col, header in enumerate(headers):
             worksheet.write(0, col, header)
 
-        worksheet.set_column('A:AD', 15)
+        # worksheet.set_column('A:AD', 25)
+        # Set column width to None for each column
+        
 
         # Write data rows for the selected fields
         date_format = workbook.add_format({'num_format': 'dd-mm-yyyy'})
         for row, employee in enumerate(employees, start=1):
             for col, field_name in enumerate(fields_to_include):
                 field_value = getattr(employee, field_name)
-                if field_name == 'emp_country_id':
-                    field_value = employee.emp_country_id.country_name if employee.emp_country_id else ""
-                elif field_name == 'emp_state_id':
-                    field_value = employee.emp_state_id.state_name if employee.emp_state_id else ''
-                elif field_name == 'emp_company_id':
-                    field_value = employee.emp_company_id.cmpny_name if employee.emp_company_id else ''
-                elif field_name == 'emp_branch_id':
-                    field_value = employee.emp_branch_id.branch_name if employee.emp_branch_id else ''
-                elif field_name == 'emp_dept_id':
-                    field_value = employee.emp_dept_id.dept_name if employee.emp_dept_id else ''
-                elif field_name == "emp_desgntn_id": 
-                    field_value = employee.emp_desgntn_id.job_title if employee.emp_desgntn_id else ""
-                elif field_name == "emp_ctgry_id": 
-                    field_value = employee.emp_ctgry_id.catogary_title if employee.emp_ctgry_id else ""
+                if field_name == 'emp_country_id':  # Check if the field is the country field
+                    country_name = field_value.country_name if field_value else ''
+                    worksheet.write(row, col, country_name)
+                elif field_name == 'emp_state_id':  # Check if the field is the country field
+                    state_name = field_value.state_name if field_value else ''
+                    worksheet.write(row, col, state_name)
+                elif field_name == 'emp_nationality_id':  # Check if the field is the country field
+                    nationality_name = field_value.N_name if field_value else ''
+                    worksheet.write(row, col, nationality_name)
                 
+                elif field_name == 'emp_company_id':  # Check if the field is the country field
+                    cmpny_name = field_value.cmpny_name if field_value else ''
+                    worksheet.write(row, col, cmpny_name)
+                elif field_name == 'emp_branch_id':  # Check if the field is the country field
+                    branch_name = field_value.branch_name if field_value else ''
+                    worksheet.write(row, col, branch_name)
+                elif field_name == 'emp_dept_id':  # Check if the field is the country field
+                    dept_name = field_value.dept_name if field_value else ''
+                    worksheet.write(row, col, dept_name)
+                elif field_name == 'emp_desgntn_id':  # Check if the field is the country field
+                    job_title = field_value.job_title if field_value else ''
+                    worksheet.write(row, col, job_title)
+                if field_name == 'emp_ctgry_id':  # Check if the field is the country field
+                    catogary_title = field_value.catogary_title if field_value else ''
+                    worksheet.write(row, col, catogary_title)
                 elif isinstance(field_value, datetime.date):
                     worksheet.write(row, col, field_value.strftime('%d-%m-%Y'), date_format)
                 else:
-                    worksheet.write(row, col, field_value)
-
-        # Close the workbook
+                    worksheet.write(row, col, str(field_value))
+        column_width = 25
+        for col in range(len(fields_to_include)):
+            worksheet.set_column(col, col, column_width)
+        # worksheet.set_column(0, len(fields_to_include) - 1, None, None, {'autofit': True})
         workbook.close()
         return response
-            
-          
-    # @action(detail=False, methods=['get'])
-    # def emp_select_report(self, request, *args, **kwargs):
-    #         # Query employee details from the database
-    #         employees = emp_master.objects.all()
 
-    #         # Fields to include in the report
-    #         fields_to_include = request.GET.getlist('fields', [])  # Get list of fields from query parameters
-            
-    #         # If no fields are specified, include all fields
-    #         if not fields_to_include:
-    #             fields_to_include = ["emp_code", "emp_first_name", "emp_last_name", "emp_gender", "emp_date_of_birth",
-    #                                 "emp_personal_email", "emp_mobile_number_1", "emp_mobile_number_2", "emp_country_id",
-    #                                 "emp_state_id", "emp_city", "emp_permenent_address", "emp_present_address",
-    #                                 "emp_status", "emp_hired_date", "emp_active_date", "emp_relegion",
-    #                                 "emp_blood_group", "emp_nationality_id", "emp_marital_status", "emp_father_name",
-    #                                 "emp_mother_name", "emp_posting_location", "is_active", "epm_ot_applicable",
-    #                                 "emp_company_id", "emp_branch_id", "emp_dept_id", "emp_desgntn_id", "emp_ctgry_id"]
-    #         else:
-    #             # Filter out invalid fields
-    #             valid_fields = [field for field in fields_to_include if field in ["emp_code", "emp_first_name", "emp_last_name", "emp_gender", "emp_date_of_birth",
-    #                                                                             "emp_personal_email", "emp_mobile_number_1", "emp_mobile_number_2", "emp_country_id",
-    #                                                                             "emp_state_id", "emp_city", "emp_permenent_address", "emp_present_address",
-    #                                                                             "emp_status", "emp_hired_date", "emp_active_date", "emp_relegion",
-    #                                                                             "emp_blood_group", "emp_nationality_id", "emp_marital_status", "emp_father_name",
-    #                                                                             "emp_mother_name", "emp_posting_location", "is_active", "epm_ot_applicable",
-    #                                                                             "emp_company_id", "emp_branch_id", "emp_dept_id", "emp_desgntn_id", "emp_ctgry_id"]]
-    #             fields_to_include = valid_fields
-            
-    #         # Create a response object
-    #         response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-    #         response['Content-Disposition'] = 'attachment; filename="employee_report.xlsx"'
-
-    #         # Create an Excel workbook and add a worksheet
-    #         workbook = xlsxwriter.Workbook(response)
-    #         worksheet = workbook.add_worksheet()
-
-    #         # Add column headers
-    #         headers = ["Employee Code", "First Name", "Last Name", "Gender", "DOB", "Email", "Mobile Number",
-    #                 "Mobile Number2", "Country", "State", "City", "Permanent Address", "Present Address", "Status",
-    #                 "Hired Date", "Active Date", "Religion", "Blood Group", "Nationality", "Marital Status",
-    #                 "Father Name", "Mother Name", "Posting Location", "Active", "OT Applicable", "Company", "Branch",
-    #                 "Department", "Designation", "Category"]
-
-    #         # Write column headers for the included fields
-    #         for col, field_name in enumerate(fields_to_include):
-    #             header = headers[col] if col < len(headers) else field_name  # Use field name if header not available
-    #             worksheet.write(0, col, header)
-            
-    #         worksheet.set_column('A:AD', 15)
-            
-            # Write data rows
-            # date_format = workbook.add_format({'num_format': 'dd-mm-yyyy'})
-            # for row, employee in enumerate(employees, start=1):
-            #     for col, field_name in enumerate(fields_to_include):
-            #         field_value = getattr(employee, field_name)
-            #         if field_name == "emp_country_id":
-            #             field_value = field_value.country_name if field_value else ""  # Assuming country_name is the attribute
-            #         elif field_name == "emp_state_id":
-            #             field_value = field_value.state_name if field_value else ""
-            #         elif field_name == "emp_nationality_id":
-            #             field_value = field_value.N_name if field_value else ""  # Assuming nationality_name is the attribute
-            #         elif field_name == "emp_company_id":
-            #             field_value = field_value.cmpny_name  if field_value else ""
-            #         elif field_name == "emp_branch_id":
-            #             field_value = field_value.branch_name if field_value else ""
-            #         elif field_name == "emp_dept_id":
-            #             field_value = field_value.dept_name if field_value else ""
-            #         elif field_name == "emp_desgntn_id": 
-            #             field_value = field_value.job_title if field_value else ""
-            #         elif field_name == "emp_ctgry_id": 
-            #             field_value = field_value.catogary_title if field_value else ""
-                    
-            #         elif isinstance(field_value, datetime.date):
-            #             worksheet.write(row, col, field_value.strftime('%d-%m-%Y'), date_format)
-            #         else:
-            #             worksheet.write(row, col, field_value)
-
-    #         # Close the workbook
-    #         workbook.close()
-    #         return response    
+    
     
 class CustomFieldViewset(viewsets.ModelViewSet):
     queryset = Emp_CustomField.objects.all()
