@@ -1,0 +1,57 @@
+<!-- <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generate Employee Excel Report</title>
+</head>
+<body>
+    <h1>Generate Employee Excel Report</h1>
+    <form action="{% url 'generate_employee_excel_report' %}" method="GET">
+        <label for="department_id">Department ID:</label>
+        <input type="text" id="department_id" name="department_id" required>
+        <button type="submit">Generate Report</button>
+    </form>
+</body>
+</html> -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generate Employee Excel Report</title>
+</head>
+<body>
+    <h1>Generate Employee Excel Report</h1>
+    <form id="departmentForm">
+        <label for="department_id">Department ID:</label>
+        <input type="text" id="department_id" name="department_id" required>
+        <button type="submit">Generate Report</button>
+    </form>
+
+    <script>
+        document.getElementById("departmentForm").addEventListener("submit", function(event) {
+            event.preventDefault();
+            var departmentId = document.getElementById("department_id").value;
+            fetch('/api/employee-excel-report/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'  // Ensure CSRF token is included if needed
+                },
+                body: JSON.stringify({ department_id: departmentId })
+            })
+            .then(response => response.blob())
+            .then(blob => {
+                var url = window.URL.createObjectURL(blob);
+                var a = document.createElement('a');
+                a.href = url;
+                a.download = 'employee_report.xlsx';
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+            });
+        });
+    </script>
+</body>
+</html>

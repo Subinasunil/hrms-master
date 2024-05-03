@@ -4,7 +4,8 @@ from .views import (EmpFamViewSet, EmpJobHistoryvSet, EmpViewSet,
                     Emp_QualificationViewSet, Emp_DocumentViewSet, EmpLeaveRequestViewSet,EmpbulkuploadViewSet,
                     CustomFieldViewset,EmpFam_CustomFieldViewset,EmpJobHistory_UdfViewset,EmpQf_UdfViewset,EmpDoc_UdfViewset,
                     Bulkupload_DocumentViewSet,LanguageSkillViewSet,MarketingSkillViewSet,ProgrammingLanguageSkillViewSet,EmployeeSkillViewSet,
-                    LanguageBlkupldViewSet,ProLangBlkupldViewSet,MarketingBlkupldViewSet)
+                    LanguageBlkupldViewSet,ProLangBlkupldViewSet,MarketingBlkupldViewSet,GenerateEmployeeExcelReport,
+                    )
                    
 
 # Define the main router for top-level routes
@@ -30,7 +31,10 @@ router.register(r'emp-skill',EmployeeSkillViewSet, basename='emp_skill')
 router.register(r'emp-language-skill-blkupld', LanguageBlkupldViewSet, basename='emp_language_skillblkupld')
 router.register(r'emp-marketing-skill-blkupld', MarketingBlkupldViewSet, basename='emp_marketing_skillblkupld')
 router.register(r'emp-programming-skill-blkupld', ProLangBlkupldViewSet, basename='emp_programming_skillblkupld')
+
+
 # Define nested routes for accessing related resources under each employee
+
 employee_router = DefaultRouter()
 employee_router.register(r'emp-bulkupload', EmpbulkuploadViewSet, basename='emp-bulkupload')
 employee_router.register(r'emp-family', EmpFamViewSet, basename='employee-family')
@@ -48,8 +52,7 @@ urlpatterns = [
     path('api/Employee/emp_pdf_report/', EmpViewSet.as_view({'get': 'emp_pdf_report'}), name='emp_pdf_report'),
     path('api/Employee/<int:pk>/add_custom_field/', EmpViewSet.as_view({'patch': 'add_field'}), name='add_custom_field'),
     path('employee/api/Employee/select_fields/', EmpViewSet.as_view({'get': 'select_fields'}), name='select_fields'),
-    path('employee/api/Employee/emp_select_report/', EmpViewSet.as_view({'post': 'emp_select_report'}), name='emp_select_report')
-    
-    
+    path('employee/api/Employee/emp_select_report/', EmpViewSet.as_view({'post': 'emp_select_report'}), name='emp_select_report'),
+    path('generate-report/', GenerateEmployeeExcelReport.as_view(), name='generate_employee_excel_report'),
     
 ]

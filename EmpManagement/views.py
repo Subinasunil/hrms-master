@@ -9,9 +9,10 @@ from .serializer import (Emp_qf_Serializer,EmpFamSerializer,EmpSerializer,
                          EmpJobHistorySerializer,EmpLeaveRequestSerializer,DocumentSerializer,EmpBulkUploadSerializer,CustomFieldSerializer,
                          EmpFam_CustomFieldSerializer,EmpJobHistory_Udf_Serializer,Emp_qf_udf_Serializer,EmpDocuments_Udf_Serializer,
                          DocBulkuploadSerializer,LanguageSkillSerializer,MarketingSkillSerializer,ProgrammingLanguageSkillSerializer,EmployeeSkillSerializer,
-                         LanguageBlkupldSerializer,MarketingBlkupldSerializer,ProLangBlkupldSerializer)
+                         LanguageBlkupldSerializer,MarketingBlkupldSerializer,ProLangBlkupldSerializer,)
 from rest_framework.decorators import action,api_view
 from rest_framework import viewsets,filters,parsers
+from django.views import View
 from rest_framework.response import Response
 from rest_framework import status,generics,viewsets,permissions
 # from rest_framework.authentication import SessionAuthentication,TokenAuthentication
@@ -435,8 +436,99 @@ class EmpViewSet(viewsets.ModelViewSet):
         # worksheet.set_column(0, len(fields_to_include) - 1, None, None, {'autofit': True})
         workbook.close()
         return response
-
     
+# def generate_employee_excel_report(request):
+#     department_id = request.GET.get('department_id')
+
+#     if department_id:
+#         # Query employees based on the department ID
+#         employees = emp_master.objects.filter(emp_dept_id=department_id)
+
+#         # Create a new Excel workbook and sheet
+#         wb = Workbook()
+#         ws = wb.active
+
+#         # Define headers
+#         headers = [
+#             "Employee Code",
+#             "First Name",
+#             "Last Name",
+#             "Gender",
+#             "Date of Birth",
+#             "Personal Email",
+#             # Add more headers as needed
+#         ]
+
+#         # Write headers to the Excel sheet
+#         for col_num, header_title in enumerate(headers, 1):
+#             ws.cell(row=1, column=col_num, value=header_title)
+
+#         # Write employee data to the Excel sheet
+#         for row_num, employee in enumerate(employees, 2):
+#             ws.cell(row=row_num, column=1, value=employee.emp_code)
+#             ws.cell(row=row_num, column=2, value=employee.emp_first_name)
+#             ws.cell(row=row_num, column=3, value=employee.emp_last_name)
+#             ws.cell(row=row_num, column=4, value=employee.get_emp_gender_display())
+#             ws.cell(row=row_num, column=5, value=employee.emp_date_of_birth)
+#             ws.cell(row=row_num, column=6, value=employee.emp_personal_email)
+#             # Add more cell values as needed
+
+#         # Save the Excel file
+#         response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+#         response['Content-Disposition'] = 'attachment; filename=employee_report.xlsx'
+#         wb.save(response)
+#         return response
+#     else:
+#         # If department ID is not provided, render a form or template to input it
+#         return render(request, 'department_form.html')
+
+
+class GenerateEmployeeExcelReport(View):
+    def get(self, request):
+        department_id = request.GET.get('department_id')
+
+        if department_id:
+            # Query employees based on the department ID
+            employees = emp_master.objects.filter(emp_dept_id=department_id)
+
+            # Create a new Excel workbook and sheet
+            wb = Workbook()
+            ws = wb.active
+
+            # Define headers
+            headers = [
+                "Employee Code",
+                "First Name",
+                "Last Name",
+                "Gender",
+                "Date of Birth",
+                "Personal Email",
+                # Add more headers as needed
+            ]
+
+            # Write headers to the Excel sheet
+            for col_num, header_title in enumerate(headers, 1):
+                ws.cell(row=1, column=col_num, value=header_title)
+
+            # Write employee data to the Excel sheet
+            for row_num, employee in enumerate(employees, 2):
+                ws.cell(row=row_num, column=1, value=employee.emp_code)
+                ws.cell(row=row_num, column=2, value=employee.emp_first_name)
+                ws.cell(row=row_num, column=3, value=employee.emp_last_name)
+                ws.cell(row=row_num, column=4, value=employee.get_emp_gender_display())
+                ws.cell(row=row_num, column=5, value=employee.emp_date_of_birth)
+                ws.cell(row=row_num, column=6, value=employee.emp_personal_email)
+                # Add more cell values as needed
+
+            # Save the Excel file
+            response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+            response['Content-Disposition'] = 'attachment; filename=employee_report.xlsx'
+            wb.save(response)
+            return response
+        else:
+            # If department ID is not provided, render a form or template to input it
+            return render(request, 'department_form.html')
+
     
 class CustomFieldViewset(viewsets.ModelViewSet):
     queryset = Emp_CustomField.objects.all()

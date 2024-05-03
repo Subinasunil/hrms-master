@@ -207,8 +207,11 @@ class EmployeeSkillSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+
+
 #EMPLOYEE SERIALIZER
 class EmpSerializer(serializers.ModelSerializer):
+    
     
     # user = CustomUserSerializer()
     emp_family = EmpFamSerializer(many=True, read_only=True)
