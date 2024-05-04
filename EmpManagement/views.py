@@ -4,12 +4,12 @@ import datetime
 from Core.models import Document_type
 from .models import (emp_family,Emp_Documents,EmpJobHistory,EmpLeaveRequest,EmpQualification,
                      emp_master,Emp_CustomField,EmpFamily_CustomField,EmpJobHistory_CustomField,
-                     EmpQualification_CustomField,EmpDocuments_CustomField,LanguageSkill,MarketingSkill,ProgrammingLanguageSkill,EmployeeSkill)
+                     EmpQualification_CustomField,EmpDocuments_CustomField,LanguageSkill,MarketingSkill,ProgrammingLanguageSkill,EmployeeSkill,EmployeeExcelFile)
 from .serializer import (Emp_qf_Serializer,EmpFamSerializer,EmpSerializer,
                          EmpJobHistorySerializer,EmpLeaveRequestSerializer,DocumentSerializer,EmpBulkUploadSerializer,CustomFieldSerializer,
                          EmpFam_CustomFieldSerializer,EmpJobHistory_Udf_Serializer,Emp_qf_udf_Serializer,EmpDocuments_Udf_Serializer,
                          DocBulkuploadSerializer,LanguageSkillSerializer,MarketingSkillSerializer,ProgrammingLanguageSkillSerializer,EmployeeSkillSerializer,
-                         LanguageBlkupldSerializer,MarketingBlkupldSerializer,ProLangBlkupldSerializer,)
+                         LanguageBlkupldSerializer,MarketingBlkupldSerializer,ProLangBlkupldSerializer,EmployeeExcelFileSerializer)
 from rest_framework.decorators import action,api_view
 from rest_framework import viewsets,filters,parsers
 from django.views import View
@@ -22,7 +22,7 @@ from rest_framework.parsers import JSONParser
 # from rest_framework.decorators import api_view
 # from rest_framework.response import Response
 from django.http import FileResponse,HttpResponse,JsonResponse
-
+from django.core.files.base import ContentFile
 from openpyxl import Workbook
 from rest_framework.parsers import MultiPartParser, FormParser
 from .resource import EmployeeResource,EmpResource_Export,EmpCustomFieldResource,DocumentResource,LanguageSkillResource,MarketingSkillResource,ProLangSkillResource
@@ -54,13 +54,18 @@ from reportlab.lib.units import inch
 import requests
 import json
 from collections import defaultdict
-
-
+from django.utils.encoding import smart_str
+from tempfile import NamedTemporaryFile
+from django import forms
+from django.views.decorators.csrf import csrf_exempt
 # from django. utils. timezone import timedelta
 # from django.utils import timezone
 # from UserManagement.models import CustomUser
 # Create your views here.
 #EMPLOYEE CRUD
+class ExcelFileForm(forms.Form):
+    file_name = forms.CharField(label='File Name', max_length=100)
+
 class EmpViewSet(viewsets.ModelViewSet):
     queryset = emp_master.objects.all()
     serializer_class = EmpSerializer
@@ -333,16 +338,136 @@ class EmpViewSet(viewsets.ModelViewSet):
         return render(request, 'select.html', {'available_fields': available_fields})
 
     # @action(detail=False, methods=['post'])
+    # def emp_select_report(self, request, *args, **kwargs):
+    #     # Get the list of fields selected by the user from the request data
+    #     fields_to_include = request.POST.getlist('fields', [])
+
+    #     # Get the custom file name provided by the user
+    #     file_name = request.POST.get('file_name', 'employee_report')
+
+    #     # If no fields are selected, return a bad request response
+    #     if not fields_to_include:
+    #         return HttpResponse("No fields selected", status=400)
+
+    #     # Mapping of database field names to custom column headings
+    #     column_headings = {
+        #     "emp_code": "Employee Code",
+        #     "emp_first_name": "First Name",
+        #     "emp_last_name": "Last Name",
+        #     "emp_gender": "Gender",
+        #     "emp_date_of_birth": "Date of Birth",
+        #     "emp_personal_email": "Email",
+        #     "emp_mobile_number_1": "Mobile Number",
+        #     "emp_mobile_number_2": "Mobile Number2",
+        #     "emp_country_id": "Country",
+        #     "emp_state_id": "State",
+        #     "emp_city": "City",
+        #     "emp_permenent_address": "Permanent Address",
+        #     "emp_present_address": "Present Address",
+        #     "emp_status": "Status",
+        #     "emp_hired_date": "Hired Date",
+        #     "emp_active_date": "Active Date",
+        #     "emp_relegion": "Religion",
+        #     "emp_blood_group": "Blood Group",
+        #     "emp_nationality_id": "Nationality",
+        #     "emp_marital_status": "Marital Status",
+        #     "emp_father_name": "Father Name",
+        #     "emp_mother_name": "Mother Name",
+        #     "emp_posting_location": "Posting Location",
+        #     "is_active": "Active",
+        #     "epm_ot_applicable": "OT Applicable",
+        #     "emp_company_id": "Company",
+        #     "emp_branch_id": "Branch",
+        #     "emp_dept_id": "Department",
+        #     "emp_desgntn_id": "Designation",
+        #     "emp_ctgry_id": "Category",
+        #     # Add more mappings as needed
+        # }
+
+    #     # Query employee details from the database
+    #     employees = emp_master.objects.all()
+
+    #     # Create a BytesIO object to store the Excel file
+    #     output = BytesIO()
+
+    #     # Create an Excel workbook and add a worksheet
+    #     workbook = xlsxwriter.Workbook(output)
+    #     worksheet = workbook.add_worksheet()
+
+    #     # Write column headers for the selected fields
+    #     headers = [column_headings.get(field, field) for field in fields_to_include]
+    #     for col, header in enumerate(headers):
+    #         worksheet.write(0, col, header)
+
+    #     # Write data rows for the selected fields
+    #     date_format = workbook.add_format({'num_format': 'dd-mm-yyyy'})
+    #     for row, employee in enumerate(employees, start=1):
+    #         for col, field_name in enumerate(fields_to_include):
+    #             field_value = getattr(employee, field_name)
+    #             if field_name == 'emp_country_id':  
+    #                 country_name = field_value.country_name if field_value else ''
+    #                 worksheet.write(row, col, country_name)
+    #             elif field_name == 'emp_state_id':  
+    #                 state_name = field_value.state_name if field_value else ''
+    #                 worksheet.write(row, col, state_name)
+    #             elif field_name == 'emp_nationality_id':  
+    #                 nationality_name = field_value.N_name if field_value else ''
+    #                 worksheet.write(row, col, nationality_name)
+    #             elif field_name == 'emp_company_id':  
+    #                 cmpny_name = field_value.cmpny_name if field_value else ''
+    #                 worksheet.write(row, col, cmpny_name)
+    #             elif field_name == 'emp_branch_id':  
+    #                 branch_name = field_value.branch_name if field_value else ''
+    #                 worksheet.write(row, col, branch_name)
+    #             elif field_name == 'emp_dept_id':  
+    #                 dept_name = field_value.dept_name if field_value else ''
+    #                 worksheet.write(row, col, dept_name)
+    #             elif field_name == 'emp_desgntn_id':  
+    #                 job_title = field_value.job_title if field_value else ''
+    #                 worksheet.write(row, col, job_title)
+    #             elif field_name == 'emp_ctgry_id':  
+    #                 catogary_title = field_value.catogary_title if field_value else ''
+    #                 worksheet.write(row, col, catogary_title)
+    #             elif isinstance(field_value, datetime.date):
+    #                 worksheet.write(row, col, field_value.strftime('%d-%m-%Y'), date_format)
+    #             else:
+    #                 worksheet.write(row, col, str(field_value))
+
+    #     # Set column width for the selected fields
+    #     column_width = 25
+    #     for col in range(len(fields_to_include)):
+    #         worksheet.set_column(col, col, column_width)
+
+    #     # Close the workbook
+    #     workbook.close()
+
+    #     # Move the cursor to the beginning of the BytesIO object
+    #     output.seek(0)
+
+    #     # Save the BytesIO object to the model field
+    #     excel_file = EmployeeExcelFile.objects.create()
+    #     excel_file.excel_file.save("employee_report.xlsx", ContentFile(output.getvalue()))
+    #     return HttpResponse("Excel file generated and saved successfully")
+    # @csrf_exempt
     def emp_select_report(self, request, *args, **kwargs):
-        # Get the list of fields selected by the user from the request data
-        fields_to_include = request.POST.getlist('fields', [])
+        if request.method == 'POST':
+            form = ExcelFileForm(request.POST)
+            if form.is_valid():
+                file_name = form.cleaned_data['file_name']
+                fields_to_include = request.POST.getlist('fields', [])
 
-        # If no fields are selected, return a bad request response
-        if not fields_to_include:
-            return HttpResponse("No fields selected", status=400)
-
-        # Mapping of database field names to custom column headings
-        column_headings = {
+                # If no fields are selected, return a bad request response
+                if not fields_to_include:
+                    # return HttpResponse("No fields selected", status=400)
+                    fields_to_include = ["emp_code", "emp_first_name", "emp_last_name", "emp_gender", "emp_date_of_birth",
+                                     "emp_personal_email", "emp_mobile_number_1", "emp_mobile_number_2", "emp_country_id",
+                                     "emp_state_id", "emp_city", "emp_permenent_address", "emp_present_address",
+                                     "emp_status", "emp_hired_date", "emp_active_date", "emp_relegion",
+                                     "emp_blood_group", "emp_nationality_id", "emp_marital_status", "emp_father_name",
+                                     "emp_mother_name", "emp_posting_location", "is_active", "epm_ot_applicable",
+                                     "emp_company_id", "emp_branch_id", "emp_dept_id", "emp_desgntn_id", "emp_ctgry_id"]
+                # Mapping of database field names to custom column headings
+                column_headings = {
             "emp_code": "Employee Code",
             "emp_first_name": "First Name",
             "emp_last_name": "Last Name",
@@ -376,67 +501,58 @@ class EmpViewSet(viewsets.ModelViewSet):
             # Add more mappings as needed
         }
 
-        # Query employee details from the database
-        employees = emp_master.objects.all()
+                # Query employee details from the database
+                employees = emp_master.objects.all()
 
-        # Create a response object
-        response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-        response['Content-Disposition'] = 'attachment; filename="employee_report.xlsx"'
+                # Create a temporary file to store the Excel file
+                with NamedTemporaryFile(delete=False, suffix='.xlsx') as temp_file:
+                    # Create an Excel workbook and add a worksheet
+                    workbook = xlsxwriter.Workbook(temp_file.name)
+                    worksheet = workbook.add_worksheet()
 
-        # Create an Excel workbook and add a worksheet
-        workbook = xlsxwriter.Workbook(response)
-        worksheet = workbook.add_worksheet()
-        
-        # Write column headers for the selected fields
-        headers = [column_headings.get(field, field) for field in fields_to_include]
-        for col, header in enumerate(headers):
-            worksheet.write(0, col, header)
+                    # Write column headers for the selected fields
+                    headers = [column_headings.get(field, field) for field in fields_to_include]
+                    for col, header in enumerate(headers):
+                        worksheet.write(0, col, header)
 
-        # worksheet.set_column('A:AD', 25)
-        # Set column width to None for each column
-        
+                    # Write data rows for the selected fields
+                    date_format = workbook.add_format({'num_format': 'dd-mm-yyyy'})
+                    for row, employee in enumerate(employees, start=1):
+                        for col, field_name in enumerate(fields_to_include):
+                            field_value = getattr(employee, field_name)
+                            if isinstance(field_value, datetime.date):
+                                worksheet.write(row, col, field_value.strftime('%d-%m-%Y'), date_format)
+                            else:
+                                worksheet.write(row, col, str(field_value))
 
-        # Write data rows for the selected fields
-        date_format = workbook.add_format({'num_format': 'dd-mm-yyyy'})
-        for row, employee in enumerate(employees, start=1):
-            for col, field_name in enumerate(fields_to_include):
-                field_value = getattr(employee, field_name)
-                if field_name == 'emp_country_id':  # Check if the field is the country field
-                    country_name = field_value.country_name if field_value else ''
-                    worksheet.write(row, col, country_name)
-                elif field_name == 'emp_state_id':  # Check if the field is the country field
-                    state_name = field_value.state_name if field_value else ''
-                    worksheet.write(row, col, state_name)
-                elif field_name == 'emp_nationality_id':  # Check if the field is the country field
-                    nationality_name = field_value.N_name if field_value else ''
-                    worksheet.write(row, col, nationality_name)
-                
-                elif field_name == 'emp_company_id':  # Check if the field is the country field
-                    cmpny_name = field_value.cmpny_name if field_value else ''
-                    worksheet.write(row, col, cmpny_name)
-                elif field_name == 'emp_branch_id':  # Check if the field is the country field
-                    branch_name = field_value.branch_name if field_value else ''
-                    worksheet.write(row, col, branch_name)
-                elif field_name == 'emp_dept_id':  # Check if the field is the country field
-                    dept_name = field_value.dept_name if field_value else ''
-                    worksheet.write(row, col, dept_name)
-                elif field_name == 'emp_desgntn_id':  # Check if the field is the country field
-                    job_title = field_value.job_title if field_value else ''
-                    worksheet.write(row, col, job_title)
-                if field_name == 'emp_ctgry_id':  # Check if the field is the country field
-                    catogary_title = field_value.catogary_title if field_value else ''
-                    worksheet.write(row, col, catogary_title)
-                elif isinstance(field_value, datetime.date):
-                    worksheet.write(row, col, field_value.strftime('%d-%m-%Y'), date_format)
-                else:
-                    worksheet.write(row, col, str(field_value))
-        column_width = 25
-        for col in range(len(fields_to_include)):
-            worksheet.set_column(col, col, column_width)
-        # worksheet.set_column(0, len(fields_to_include) - 1, None, None, {'autofit': True})
-        workbook.close()
-        return response
-    
+                    # Set column width for the selected fields
+                    column_width = 25
+                    for col in range(len(fields_to_include)):
+                        worksheet.set_column(col, col, column_width)
+
+                    # Close the workbook
+                    workbook.close()
+
+                    # Open the temporary file and read its contents
+                    with open(temp_file.name, 'rb') as excel_file:
+                        file_data = excel_file.read()
+
+                # Save the Excel file in the Excel model
+                excel_model_instance = EmployeeExcelFile(file_name=file_name)
+                excel_model_instance.excel_file.save(f'{file_name}.xlsx', ContentFile(file_data))
+
+                return HttpResponse("Excel file generated and saved successfully")
+        else:
+            form = ExcelFileForm()
+        return render(request, 'select.html', {'form': form})
+
+    @action(detail=False, methods=['get'])
+    def get_employee_excel_files(self, request, *args, **kwargs):
+        # Retrieve all Excel files from the database
+        excel_files = EmployeeExcelFile.objects.all()
+        serializer = EmployeeExcelFileSerializer(excel_files, many=True, context={'request': request})
+        return Response(serializer.data)
+
 # def generate_employee_excel_report(request):
 #     department_id = request.GET.get('department_id')
 

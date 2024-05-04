@@ -10,7 +10,7 @@ import pandas as pd
 
 from .models import (emp_family,EmpJobHistory,EmpQualification,Emp_Documents,EmpLeaveRequest,emp_master,Emp_CustomField,
                     EmpFamily_CustomField,EmpJobHistory_CustomField,EmpQualification_CustomField,EmpDocuments_CustomField,
-                    LanguageSkill,MarketingSkill,ProgrammingLanguageSkill,EmployeeSkill)
+                    LanguageSkill,MarketingSkill,ProgrammingLanguageSkill,EmployeeSkill,EmployeeExcelFile)
 
 '''employee set'''
 
@@ -206,8 +206,15 @@ class EmployeeSkillSerializer(serializers.ModelSerializer):
         model = EmployeeSkill
         fields = '__all__'
 
-
-
+class EmployeeExcelFileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = EmployeeExcelFile
+        fields = '__all__'
+    def get_excel_file_url(self, obj):
+        request = self.context.get('request')
+        if obj.excel_file:
+            return request.build_absolute_uri(obj.excel_file.url)
+        return None
 
 #EMPLOYEE SERIALIZER
 class EmpSerializer(serializers.ModelSerializer):

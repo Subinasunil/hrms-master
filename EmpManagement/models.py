@@ -104,6 +104,15 @@ class emp_master(models.Model):
     def __str__(self):
         return self.emp_code or "Unnamed Employee"
 
+class EmployeeExcelFile(models.Model):
+    file_name = models.CharField(max_length=255,null=True)
+    excel_file = models.FileField(upload_to='employee_excel/', null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.file_name
+
+
 class Emp_CustomField(models.Model):
     FIELD_TYPES = (   
         ('dropdown', 'DropdownField'),
